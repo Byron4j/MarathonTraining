@@ -1431,9 +1431,9 @@ function calcTargetReverse() {
 let planSelPhase = null, planSelWeek = 0;
 
 function _pInfo(ph) {
-  const m = {P1:{n:'基础构建',mo:'5~6月',vol:'25→38km'},P2:{n:'引入结构',mo:'6~7月',vol:'40→48km'},
-    P3:{n:'强度提升',mo:'7~8月',vol:'48→58km'},P4:{n:'专项转化',mo:'8月',vol:'55→62km'},
-    P5:{n:'巅峰打磨',mo:'8~9月',vol:'58→65km'},P6:{n:'赛前减量',mo:'9~10月',vol:'45→25km'}};
+  const m = {P1:{n:'基础构建',mo:'5~6月',vol:'40→47km'},P2:{n:'引入结构',mo:'6~7月',vol:'48→54km'},
+    P3:{n:'强度提升',mo:'7~8月',vol:'50→58km'},P4:{n:'专项转化',mo:'8月',vol:'56→64km'},
+    P5:{n:'巅峰打磨',mo:'8~9月',vol:'60→68km'},P6:{n:'赛前减量',mo:'9~10月',vol:'48→30km'}};
   return m[ph]||{n:'',mo:'',vol:''};
 }
 function _ph4wk(wk){if(wk<=4)return'P1';if(wk<=8)return'P2';if(wk<=12)return'P3';if(wk<=16)return'P4';if(wk<=20)return'P5';if(wk<=23)return'P6';return'R';}
