@@ -1,0 +1,2029 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>马拉松训练规划 · 数据看板</title>
+<style>
+  :root {
+    --bg: #090a0f; --surface: #111318; --surface2: #181b23;
+    --surface3: #1f2330; --border: #252836; --border2: #303548;
+    --text: #e8ecf2; --text2: #8b90a0; --text3: #545969;
+    --accent: #f97316; --accent2: #fb923c; --accentBg: rgba(249,115,22,.12);
+    --green: #22c55e; --greenBg: rgba(34,197,94,.12);
+    --red: #ef4444; --redBg: rgba(239,68,68,.12);
+    --blue: #3b82f6; --blueBg: rgba(59,130,246,.12);
+    --purple: #a78bfa; --purpleBg: rgba(167,139,250,.12);
+    --cyan: #22d3ee; --cyanBg: rgba(34,211,238,.12);
+    --radius: 10px; --radius-sm: 6px;
+    --transition: 0.2s ease;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.55;
+    min-height: 100vh; display: flex;
+  }
+  a { color: var(--accent2); text-decoration: none; }
+  input, select, textarea {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 9px 12px;
+    color: var(--text); font-size: 0.875rem; font-family: inherit;
+    width: 100%; transition: border-color var(--transition);
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  label { font-size: 0.72rem; color: var(--text2); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; display: block; margin-bottom: 4px; }
+  .unit { font-size: 0.68rem; color: var(--text3); font-weight: 400; }
+
+  /* ── 侧边栏 ── */
+  .sidebar {
+    width: 220px; min-width: 220px; background: var(--surface);
+    border-right: 1px solid var(--border); display: flex; flex-direction: column;
+    padding: 20px 0; position: sticky; top: 0; height: 100vh; z-index: 10;
+  }
+  .sidebar-logo {
+    padding: 0 20px 18px; font-size: 1.05rem; font-weight: 700;
+    display: flex; align-items: center; gap: 8px;
+    border-bottom: 1px solid var(--border); margin-bottom: 12px;
+  }
+  .sidebar-logo span { color: var(--accent); }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+    color: var(--text2); font-size: 0.84rem; font-weight: 500;
+    cursor: pointer; transition: all var(--transition); border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); background: var(--accentBg); border-left-color: var(--accent); }
+  .nav-icon { width: 18px; text-align: center; font-size: 1rem; }
+  .sidebar-footer {
+    margin-top: auto; padding: 16px 20px; border-top: 1px solid var(--border);
+    font-size: 0.72rem; color: var(--text3);
+  }
+
+  /* ── 主内容 ── */
+  .main { flex: 1; padding: 24px 28px; overflow-y: auto; max-width: calc(100vw - 220px); }
+
+  /* 页头 */
+  .page-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 22px;
+  }
+  .page-header h2 { font-size: 1.3rem; font-weight: 700; }
+  .page-header .profile-badge {
+    font-size: 0.75rem; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 5px 14px; color: var(--text2); cursor: pointer; transition: all var(--transition);
+  }
+  .page-header .profile-badge:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── 统计卡片 ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-bottom: 22px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; position: relative; overflow: hidden;
+  }
+  .stat-card .stat-icon {
+    position: absolute; right: 14px; top: 14px; font-size: 1.4rem; opacity: .25;
+  }
+  .stat-card .stat-label { font-size: 0.72rem; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; }
+  .stat-card .stat-value { font-size: 1.65rem; font-weight: 700; margin-top: 4px; }
+  .stat-card .stat-sub { font-size: 0.75rem; color: var(--text3); margin-top: 2px; }
+  .stat-card.accent { border-left: 3px solid var(--accent); }
+  .stat-card.green { border-left: 3px solid var(--green); }
+  .stat-card.blue { border-left: 3px solid var(--blue); }
+  .stat-card.purple { border-left: 3px solid var(--purple); }
+
+  /* ── 网格卡片 ── */
+  .card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+  .card-grid.single { grid-template-columns: 1fr; }
+  @media (max-width: 860px) { .card-grid { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px;
+  }
+  .card h4 {
+    font-size: 0.85rem; font-weight: 600; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; color: var(--text2); text-transform: uppercase; letter-spacing: .03em;
+  }
+  .card h4 .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .card.compact { padding: 14px 16px; }
+
+  /* ── 表格 ── */
+  table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); }
+  th { color: var(--text2); font-weight: 600; font-size: 0.72rem; text-transform: uppercase; letter-spacing: .03em; }
+  tr:hover td { background: var(--surface2); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+  /* ── 徽章 ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 5px;
+    font-size: 0.73rem; font-weight: 600;
+  }
+  .badge-easy { background: var(--greenBg); color: var(--green); }
+  .badge-tempo { background: var(--cyanBg); color: var(--cyan); }
+  .badge-threshold { background: var(--accentBg); color: var(--accent); }
+  .badge-interval { background: var(--redBg); color: var(--red); }
+  .badge-recovery { background: var(--purpleBg); color: var(--purple); }
+  .badge-long { background: var(--blueBg); color: var(--blue); }
+
+  /* ── 图表区 ── */
+  .chart-container { width: 100%; height: 220px; position: relative; }
+  .chart-container svg { width: 100%; height: 100%; }
+  .chart-legend { display: flex; gap: 16px; margin-top: 8px; font-size: 0.73rem; color: var(--text2); }
+  .chart-legend span { display: flex; align-items: center; gap: 5px; }
+  .chart-legend .lg-dot { width: 9px; height: 3px; border-radius: 2px; display: inline-block; }
+
+  /* ── 按钮 ── */
+  .btn {
+    display: inline-flex; align-items: center; gap: 5px; padding: 8px 16px; border-radius: var(--radius-sm);
+    font-size: 0.82rem; font-weight: 600; font-family: inherit; cursor: pointer; border: none; transition: all var(--transition);
+  }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--border2); }
+  .btn-danger { background: var(--redBg); color: var(--red); border: 1px solid transparent; }
+  .btn-danger:hover { border-color: var(--red); }
+  .btn-sm { padding: 5px 10px; font-size: 0.74rem; }
+  .btn-xs { padding: 3px 8px; font-size: 0.7rem; border-radius: 4px; }
+
+  /* ── 输入面板 ── */
+  .input-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+  .input-row .input-group { flex: 1; min-width: 110px; }
+  .input-hint { font-size: 0.7rem; color: var(--text3); margin-top: 2px; }
+
+  /* ── 训练日志表单 ── */
+  .log-form {
+    display: grid; grid-template-columns: repeat(6, 1fr);
+    gap: 8px; margin-bottom: 14px;
+  }
+  @media (max-width: 860px) { .log-form { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 500px) { .log-form { grid-template-columns: 1fr 1fr; } }
+
+  /* ── Toast ── */
+  .toast {
+    position: fixed; bottom: 20px; right: 20px; z-index: 100;
+    background: var(--surface3); color: var(--text); padding: 12px 20px;
+    border-radius: var(--radius-sm); border: 1px solid var(--border);
+    font-size: 0.84rem; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+    animation: toastIn 0.3s ease, toastOut 0.3s ease 2s forwards;
+    display: none;
+  }
+  @keyframes toastIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+  @keyframes toastOut { from { opacity:1; } to { opacity:0; transform:translateY(-5px); } }
+
+  /* ── 模态 ── */
+  .modal-overlay {
+    position: fixed; inset:0; background: rgba(0,0,0,.6); z-index: 50;
+    display: flex; align-items: center; justify-content: center; display: none;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 24px; max-width: 420px; width: 90%;
+  }
+  .modal h3 { margin-bottom: 14px; }
+  .modal .input-group { margin-bottom: 10px; }
+
+  /* ── 进度条 ── */
+  .progress-bar {
+    height: 6px; border-radius: 3px; background: var(--surface3); overflow: hidden; margin-top: 3px;
+  }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+
+  /* ── 内容面板切换 ── */
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── 手机适配 ── */
+  @media (max-width: 700px) {
+    body { flex-direction: column; }
+    .sidebar {
+      width: 100%; min-width: 0; height: auto; position: relative;
+      flex-direction: row; flex-wrap: wrap; padding: 8px; gap: 2px;
+      border-right: none; border-bottom: 1px solid var(--border); overflow-x: auto;
+    }
+    .sidebar-logo { display: none; }
+    .sidebar-footer { display: none; }
+    .nav-item { padding: 8px 12px; font-size: 0.76rem; border-left: none; border-bottom: 2px solid transparent; }
+    .nav-item.active { border-left: none; border-bottom-color: var(--accent); }
+    .main { max-width: 100%; padding: 12px 14px; }
+    .page-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .stat-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* Phase Navigation */
+  .phase-nav{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap}
+  .phase-btn{padding:7px 12px;border-radius:6px;font-size:0.78rem;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);transition:all 0.2s;text-align:center;min-width:66px}
+  .phase-btn:hover{border-color:var(--border2);color:var(--text)}
+  .phase-btn.active{background:var(--accentBg);border-color:var(--accent);color:var(--accent)}
+  .phase-btn.current{box-shadow:0 0 0 2px var(--accent)}
+  .phase-btn .ph-sub{display:block;font-size:0.6rem;color:var(--text3);font-weight:400;margin-top:1px}
+
+  /* Timeline */
+  .tl-bar{display:flex;gap:2px;height:20px;border-radius:5px;overflow:hidden;margin-top:4px}
+  .tl-seg{flex:1;min-width:2px;background:var(--surface3);border-radius:2px;transition:background 0.3s}
+  .tl-seg.done{background:var(--accent);opacity:0.55}
+  .tl-seg.cur{background:var(--accent);box-shadow:0 0 8px rgba(249,115,22,0.45)}
+  .tl-seg.race{background:var(--green)}
+  .tl-seg.taper{background:var(--blue);opacity:0.5}
+  .tl-labels{display:flex;justify-content:space-between;margin-top:3px;font-size:0.58rem;color:var(--text3)}
+  .tl-label.cur{color:var(--accent);font-weight:600}
+
+  /* Week dots */
+  .wk-dots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .wk-dot{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.74rem;font-weight:600;cursor:pointer;background:var(--surface2);border:1px solid var(--border);color:var(--text2);transition:all 0.2s;position:relative}
+  .wk-dot:hover{border-color:var(--accent);color:var(--text)}
+  .wk-dot.active{background:var(--accentBg);border-color:var(--accent);color:var(--accent)}
+  .wk-dot.cur{box-shadow:0 0 0 2px var(--accent)}
+  .wk-dot.ms::after{content:'◆';position:absolute;top:-4px;right:-4px;font-size:7px;color:var(--red)}
+  .wk-dot.r{background:var(--greenBg);border-color:var(--green);color:var(--green)}
+
+  /* Plan day table */
+  .plan-day-table{font-size:0.82rem;width:100%}
+  .plan-day-table td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+  .plan-day-table .d-label{font-weight:700;color:var(--text2);width:42px}
+  .plan-day-table .d-type{min-width:90px}
+  .plan-day-table .d-detail{color:var(--text2)}
+  .plan-day-table .d-dist{font-weight:700;text-align:right;width:52px}
+  .plan-day-table tr.rest{opacity:0.4}
+
+  /* Accordion */
+  .acc-h{display:flex;justify-content:space-between;align-items:center;padding:11px 0;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.84rem;font-weight:600;color:var(--text2);user-select:none}
+  .acc-h:hover{color:var(--text)}
+  .acc-h .arr{transition:transform 0.2s;font-size:0.65rem}
+  .acc-h.open .arr{transform:rotate(180deg)}
+  .acc-b{display:none;padding:12px 0 4px}
+  .acc-b.open{display:block}
+</style>
+</head>
+<body>
+
+<!-- ═══ 侧边栏 ═══ -->
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><span>▸</span> 训练规划</div>
+  <div class="nav-item active" data-panel="dashboard">
+    <span class="nav-icon">◉</span> 数据看板
+  </div>
+  <div class="nav-item" data-panel="zones">
+    <span class="nav-icon">◎</span> 配速区间
+  </div>
+  <div class="nav-item" data-panel="plan">
+    <span class="nav-icon">◈</span> 训练计划
+  </div>
+  <div class="nav-item" data-panel="log">
+    <span class="nav-icon">☰</span> 训练日志
+  </div>
+  <div class="nav-item" data-panel="settings">
+    <span class="nav-icon">⚙</span> 设置
+  </div>
+  <div class="nav-item" data-panel="knowledge">
+    <span class="nav-icon">▣</span> 训练百科
+  </div>
+  <div class="sidebar-footer">v2.0 · sub-1:40 计划</div>
+</nav>
+
+<!-- ═══ 主内容区 ═══ -->
+<div class="main">
+
+  <!-- ● 数据看板 -->
+  <div class="panel active" id="panel-dashboard">
+    <div class="page-header">
+      <h2>数据看板</h2>
+      <span class="profile-badge" onclick="openProfileModal()" title="切换预设">
+        📊 <span id="profileName">我的数据</span>
+      </span>
+    </div>
+
+    <!-- 统计卡片 -->
+    <div class="stat-grid" id="dashboardStats"></div>
+
+    <!-- 图表区 -->
+    <div class="card-grid">
+      <div class="card">
+        <h4><span class="dot" style="background:var(--accent)"></span>周跑量趋势</h4>
+        <div class="chart-container"><svg id="chartVolume"></svg></div>
+        <div class="chart-legend">
+          <span><span class="lg-dot" style="background:var(--accent)"></span>跑量(km)</span>
+          <span><span class="lg-dot" style="background:var(--green)"></span>目标</span>
+        </div>
+      </div>
+      <div class="card">
+        <h4><span class="dot" style="background:var(--cyan)"></span>平均配速趋势</h4>
+        <div class="chart-container"><svg id="chartPace"></svg></div>
+        <div class="chart-legend">
+          <span><span class="lg-dot" style="background:var(--cyan)"></span>配速(min/km)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 最近训练 & 训练分布 -->
+    <div class="card-grid">
+      <div class="card">
+        <h4><span class="dot" style="background:var(--purple)"></span>最近训练</h4>
+        <table><tbody id="recentLogs"></tbody></table>
+        <p style="text-align:center;padding:20px;color:var(--text3);display:none" id="noLogsHint">暂无训练记录，去「训练日志」页面添加吧</p>
+      </div>
+      <div class="card">
+        <h4><span class="dot" style="background:var(--blue)"></span>训练类型分布 (月度)</h4>
+        <div class="chart-container" style="height:200px"><svg id="chartPie"></svg></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ● 配速区间 -->
+  <div class="panel" id="panel-zones">
+    <div class="page-header"><h2>配速区间</h2></div>
+
+    <!-- 参数输入 -->
+    <div class="card" style="margin-bottom:14px">
+      <h4>生理参数</h4>
+      <div class="input-row">
+        <div class="input-group">
+          <label>乳酸阈配速 <span class="unit">/km</span></label>
+          <input type="text" id="zpPace" value="4:48" placeholder="mm:ss">
+        </div>
+        <div class="input-group">
+          <label>半马 PB <span class="unit">h:mm:ss</span></label>
+          <input type="text" id="zpHmPB" value="1:47:00" placeholder="1:47:00">
+          <div class="input-hint">用于 VDOT 推算</div>
+        </div>
+        <div class="input-group">
+          <label>乳酸阈心率 <span class="unit">bpm</span></label>
+          <input type="number" id="zpThrHR" value="171">
+        </div>
+        <div class="input-group">
+          <label>静息心率 <span class="unit">bpm</span></label>
+          <input type="number" id="zpRestHR" value="58">
+        </div>
+        <div class="input-group">
+          <label>最大心率 <span class="unit">bpm</span></label>
+          <input type="number" id="zpMaxHR" value="192">
+          <div class="input-hint">留空自动推算</div>
+        </div>
+        <div class="input-group" style="justify-content:flex-end">
+          <button class="btn btn-primary" onclick="calcZones()">更新</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 配速区间表 -->
+    <div class="card-grid">
+      <div class="card">
+        <h4><span class="dot" style="background:var(--accent)"></span>配速区间表</h4>
+        <table>
+          <thead><tr><th>高驰分区</th><th>配速/km</th><th>心率</th><th>用途</th><th>占比</th></tr></thead>
+          <tbody id="zoneTable"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h4><span class="dot" style="background:var(--red)"></span>分段配速 (间歇参考)</h4>
+        <table>
+          <thead><tr><th>高驰分区</th><th>400m</th><th>800m</th><th>1000m</th></tr></thead>
+          <tbody id="splitTable"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 成绩预测 -->
+    <div class="card">
+      <h4><span class="dot" style="background:var(--green)"></span>等效成绩预测 & 目标</h4>
+      <p style="font-size:0.76rem;color:var(--text3);margin-bottom:10px">VDOT 基于半马 PB 反推，而非 VO2max 直接估算。</p>
+      <table>
+        <thead><tr><th>距离</th><th>基于半马 PB</th><th>阈值潜力</th><th>12周务实目标</th></tr></thead>
+        <tbody id="predTable"></tbody>
+      </table>
+      <p style="font-size:0.73rem;color:var(--text3);margin-top:8px">夏季高温高湿环境中训练，进步幅度通常比秋冬低 30%~50%。目标按保守 4% 提升估算。</p>
+    </div>
+
+    <!-- 目标反推 -->
+    <div class="card">
+      <h4><span class="dot" style="background:var(--accent)"></span>目标反推 — 你需要多大阈值？</h4>
+      <div class="input-row" style="margin-bottom:10px">
+        <div class="input-group">
+          <label>目标半马时间 <span class="unit">h:mm:ss</span></label>
+          <input type="text" id="targetHmInput" value="1:40:00" placeholder="1:40:00">
+        </div>
+        <div style="align-self:end">
+          <button class="btn btn-primary btn-sm" onclick="calcTargetReverse()">反推</button>
+        </div>
+      </div>
+      <div id="targetReverseResult" style="font-size:0.84rem;padding:8px 0"></div>
+    </div>
+  </div>
+
+  <!-- ● 训练计划 -->
+  <div class="panel" id="panel-plan">
+    <div class="page-header"><h2>训练计划</h2></div>
+
+    <!-- 计划开始日期 + 当前状态 -->
+    <div class="card" style="margin-bottom:14px">
+      <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+        <div class="input-group" style="min-width:150px">
+          <label>计划开始日期</label>
+          <input type="date" id="planStartDate" value="2026-05-10" onchange="renderPlan()">
+        </div>
+        <div id="planStatus" style="font-size:0.84rem;padding-bottom:9px;color:var(--text2)"></div>
+      </div>
+    </div>
+
+    <!-- 24周进度条 -->
+    <div class="card" style="margin-bottom:14px">
+      <h4 style="margin-bottom:4px"><span class="dot" style="background:var(--accent)"></span>24 周训练周期</h4>
+      <div class="tl-bar" id="planTimeline"></div>
+      <div class="tl-labels" id="planTimelineLabels"></div>
+    </div>
+
+    <!-- 阶段切换 -->
+    <div class="phase-nav" id="phaseNav"></div>
+
+    <!-- 本周训练 -->
+    <div class="card" style="margin-bottom:14px">
+      <h4 id="weeklyPlanTitle" style="margin-bottom:2px"></h4>
+      <div id="planWeekInfo" style="font-size:0.76rem;color:var(--text2);margin-bottom:10px"></div>
+      <table class="plan-day-table"><tbody id="weeklyPlanContent"></tbody></table>
+      <div id="planWeekTotal" style="margin-top:10px;font-size:0.84rem"></div>
+    </div>
+
+    <!-- 周选择器 -->
+    <div class="wk-dots" id="weekSelector" style="margin-bottom:16px"></div>
+
+    <!-- 阶段详情 (可折叠) -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="acc-h" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        📋 阶段详情 <span class="arr">▾</span>
+      </div>
+      <div class="acc-b" id="accordionPhase"></div>
+    </div>
+
+    <!-- 里程碑 -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="acc-h" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        🎯 里程碑测试 <span class="arr">▾</span>
+      </div>
+      <div class="acc-b" id="accordionMilestones"></div>
+    </div>
+
+    <!-- 配速演进 -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="acc-h" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        ⏱ 配速演进表 <span class="arr">▾</span>
+      </div>
+      <div class="acc-b" id="accordionPaceEvo"></div>
+    </div>
+
+    <!-- 力量训练 -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="acc-h" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        💪 力量训练 <span class="arr">▾</span>
+      </div>
+      <div class="acc-b" id="accordionStrength"></div>
+    </div>
+
+    <!-- 深圳天气调整 -->
+    <div class="card" style="margin-bottom:14px">
+      <div class="acc-h" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('open')">
+        ⚠ 深圳训练调整 <span class="arr">▾</span>
+      </div>
+      <div class="acc-b" id="accordionWeather"></div>
+    </div>
+  </div>
+
+  <!-- ● 训练日志 -->
+  <div class="panel" id="panel-log">
+    <div class="page-header">
+      <h2>训练日志</h2>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-secondary btn-sm" onclick="exportLogCSV()">⬇ 导出 CSV</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearLogs()">🗑 清空</button>
+      </div>
+    </div>
+
+    <!-- 新增表单 -->
+    <div class="card" style="margin-bottom:14px">
+      <h4 id="logFormTitle">➕ 新增训练</h4>
+      <form id="logForm" onsubmit="addLog(event)">
+        <div class="log-form">
+          <div class="input-group">
+            <label>日期</label>
+            <input type="date" id="logDate" required>
+          </div>
+          <div class="input-group">
+            <label>训练类型</label>
+            <select id="logType" required>
+              <option value="">选择类型</option>
+              <option>轻松跑</option><option>阈值间歇</option><option>节奏跑</option>
+              <option>长距离</option><option>VO2max间歇</option>
+              <option>恢复跑</option><option>比赛</option><option>交叉训练</option>
+            </select>
+          </div>
+          <div class="input-group">
+            <label>距离 <span class="unit">km</span></label>
+            <input type="number" id="logDist" step="0.1" min="0" placeholder="10.0">
+          </div>
+          <div class="input-group">
+            <label>时长 <span class="unit">min</span></label>
+            <input type="number" id="logDur" step="0.1" min="0" placeholder="55">
+          </div>
+          <div class="input-group">
+            <label>平均心率 <span class="unit">bpm</span></label>
+            <input type="number" id="logHR" min="0" placeholder="150">
+          </div>
+          <div class="input-group">
+            <label>体感 <span class="unit">1-10</span></label>
+            <input type="number" id="logFeel" min="1" max="10" placeholder="7">
+          </div>
+          <div class="input-group" style="grid-column:1/-1">
+            <label>备注</label>
+            <input type="text" id="logNote" placeholder="天气、感受等...">
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="submit" class="btn btn-primary btn-sm" id="logSubmitBtn">添加记录</button>
+          <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEditLog()" id="logCancelBtn" style="display:none">取消编辑</button>
+          <input type="hidden" id="logEditIdx" value="-1">
+        </div>
+      </form>
+    </div>
+
+    <!-- 日志列表 -->
+    <div class="card">
+      <h4>训练记录 <span id="logCount" style="color:var(--text3);font-weight:400">(0)</span></h4>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>日期</th><th>类型</th><th>距离</th><th>时长</th><th>配速</th><th>心率</th><th>体感</th><th>备注</th><th></th></tr></thead>
+          <tbody id="logTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ● 设置 -->
+  <div class="panel" id="panel-settings">
+    <div class="page-header"><h2>设置</h2></div>
+
+    <div class="card" style="margin-bottom:14px">
+      <h4>当前生理参数</h4>
+      <div class="input-row" style="margin-bottom:12px">
+        <div class="input-group"><label>乳酸阈配速</label><input type="text" id="setPace" value="4:48"></div>
+        <div class="input-group"><label>半马 PB</label><input type="text" id="setHmPB" value="1:47:00" placeholder="h:mm:ss"></div>
+        <div class="input-group"><label>乳酸阈心率</label><input type="number" id="setThrHR" value="171"></div>
+        <div class="input-group"><label>静息心率</label><input type="number" id="setRestHR" value="58"></div>
+        <div class="input-group"><label>最大心率</label><input type="number" id="setMaxHR" value="192"></div>
+        <div class="input-group"><label>VO2max</label><input type="number" id="setVO2" value="52"></div>
+        <div class="input-group"><label>跑步能力 (高驰)</label><input type="number" id="setAbility" value="78.9" step="0.1"></div>
+        <div class="input-group"><label>年龄</label><input type="number" id="setAge" value="36" min="15" max="90"></div>
+        <div class="input-group"><label>身高 <span class="unit">cm</span></label><input type="number" id="setHeight" value="170" min="100" max="250"></div>
+        <div class="input-group"><label>体重 <span class="unit">kg</span></label><input type="number" id="setWeight" value="67.2" step="0.1" min="30" max="200"></div>
+      </div>
+      <button class="btn btn-primary" onclick="saveSettings()">💾 保存设置</button>
+    </div>
+
+    <div class="card">
+      <h4>预设管理</h4>
+      <p style="font-size:0.82rem;color:var(--text2);margin-bottom:10px">保存多套参数，方便切换不同阶段。</p>
+      <div id="presetList" style="margin-bottom:10px"></div>
+      <button class="btn btn-secondary btn-sm" onclick="openProfileModal()">➕ 新建预设</button>
+    </div>
+  </div>
+
+  <!-- ● 训练百科 -->
+  <div class="panel" id="panel-knowledge">
+    <div class="page-header"><h2>训练百科</h2></div>
+    <div class="card">
+      <h4>📋 速查索引</h4>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px">
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('coros')">高驰手表</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('vo2max')">VO2max</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('lactate')">乳酸阈值</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('economy')">跑步经济性</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('hr')">心率区间</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('vdot')">VDOT 系统</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('easy')">轻松跑</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('tempo')">节奏跑</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('threshold')">阈值训练</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('interval')">速度间歇</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('longrun')">长距离</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('fartlek')">法特莱克</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('cadence')">步频步幅</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('form')">跑姿要点</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('periodization')">周期化训练</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('8020')">80/20 法则</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('load')">训练负荷</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('heat')">热适应</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('recovery')">恢复策略</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('nutrition')">营养策略</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('shoes')">跑鞋选择</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('strength')">力量与跑步</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('injury')">伤病预防</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('raceday')">比赛日</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('race')">配速策略</button>
+        <button class="btn btn-sm btn-secondary" onclick="scrollToKb('glossary')">术语速查</button>
+      </div>
+    </div>
+
+    <div id="kb-vo2max" class="card">
+      <h4><span class="dot" style="background:var(--red)"></span>最大摄氧量 (VO2max)</h4>
+      <p>人体在极限强度运动时，每分钟每公斤体重能够摄取和利用的最大氧气量（ml/kg/min）。</p>
+      <p style="color:var(--text2);margin-top:6px"><strong>类比: 发动机排量</strong> — 决定了有氧能力的上限。你的 VO2max 52 属优秀，完全够支撑 sub-1:40。</p>
+      <p style="color:var(--text2)"><strong>手表 vs 实验室:</strong> 手表估值有 ±2-5 误差。绝对值不太可靠，但趋势变化有价值。</p>
+      <p style="color:var(--text2)"><strong>训练改善:</strong> LSD 增加毛细血管密度；VO2max 间歇 (95-100% 强度 × 3-5min) 刺激心输出量。首年可提升 15-20%，之后每年 3-5%。</p>
+    </div>
+
+    <div id="kb-lactate" class="card">
+      <h4><span class="dot" style="background:var(--accent)"></span>乳酸阈值 (Lactate Threshold)</h4>
+      <p>运动强度增加到临界点时，血乳酸浓度开始指数级上升。超过阈值后，耐力从「很长」骤降到「30-60 分钟」。</p>
+      <p style="color:var(--text2);margin-top:6px"><strong>为什么核心:</strong> 马拉松/半马必须在阈值以下跑。阈值越高 → 比赛配速越快。这是长跑成绩的<strong>最大可训练因素</strong>。</p>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:10px;font-size:0.82rem">
+        <div style="margin-bottom:6px;font-weight:600">阈值配速与比赛配速的关系:</div>
+        <div>5K 配速 ≈ 阈值 × 0.92 | 10K ≈ 阈值 × 0.95</div>
+        <div style="color:var(--accent);font-weight:600">半马配速 ≈ 阈值 × 1.03 | 全马 ≈ 阈值 × 1.08</div>
+      </div>
+    </div>
+
+    <div id="kb-economy" class="card">
+      <h4><span class="dot" style="background:var(--cyan)"></span>跑步经济性 (Running Economy)</h4>
+      <p>给定次最大速度下的耗氧量。经济性越好，同样配速耗氧越少。<strong>类比: VO2max = 排量，经济性 = 油耗。</strong></p>
+      <p style="color:var(--text2);margin-top:6px"><strong>改善方法:</strong> 短冲刺 (Strides 100m×4-8)、大重量力量训练、上坡跑、提高步频至 170-180 spm。</p>
+      <p style="color:var(--text2)"><strong>你的关键瓶颈:</strong> VO2max 52 很高但 PB VDOT 仅 41。差距恰好说明经济性和专项耐力需要提升——这正是 24 周计划的核心目标。</p>
+    </div>
+
+    <div id="kb-hr" class="card">
+      <h4><span class="dot" style="background:var(--purple)"></span>心率区间 · 高驰 6 区模型</h4>
+      <p>你的数据: 年龄 36, RHR 58, HRmax 192, LTHR 171。本表与高驰手表<strong>6区训练体系完全对齐</strong>。</p>
+      <table style="margin-top:10px">
+        <thead><tr><th>分区</th><th>%HRmax</th><th>心率 (你)</th><th>配速感</th><th>适用</th></tr></thead>
+        <tbody>
+          <tr><td>Z1 恢复</td><td>50-60%</td><td>96-115</td><td>极轻松</td><td>热身、冷身、主动恢复</td></tr>
+          <tr><td>Z2 有氧耐力</td><td>60-70%</td><td>115-134</td><td>可对话</td><td>轻松跑、长距离、建仓</td></tr>
+          <tr><td>Z3 有氧动力</td><td>70-80%</td><td>134-154</td><td>说几句话</td><td>节奏跑、马拉松配速</td></tr>
+          <tr><td style="color:var(--accent);font-weight:600">Z4 乳酸阈</td><td style="color:var(--accent);font-weight:600">80-90%</td><td style="color:var(--accent);font-weight:600">154-173</td><td>说几个词</td><td>阈值间歇、巡航间歇</td></tr>
+          <tr><td style="color:var(--red);font-weight:600">Z5 无氧耐力</td><td style="color:var(--red);font-weight:600">90-95%</td><td style="color:var(--red);font-weight:600">173-182</td><td>说不出话</td><td>速度间歇 (800-1200m)</td></tr>
+          <tr><td>Z6 无氧冲刺</td><td>95-100%</td><td>182-192</td><td>极限</td><td>短冲、上坡冲刺</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:8px"><strong>心率漂移:</strong> 长跑中配速不变，心率也会缓慢上升。深圳夏季漂移尤其严重——<strong>以配速为准，心率做参考</strong>。早晨心率比下午低 5-8 bpm。</p>
+      <p style="color:var(--text3);font-size:0.73rem"><strong>高驰手表建议:</strong> 设置心率区间为"乳酸阈值心率百分比"模式最准确。你的乳酸阈心率 171 bpm → Z4 上界 ~173 bpm。</p>
+    </div>
+
+    <div id="kb-vdot" class="card">
+      <h4><span class="dot" style="background:var(--blue)"></span>VDOT 系统 (Jack Daniels)</h4>
+      <p>VDOT 是表现等效分数，同样 VDOT 的人在不同距离有可预测的成绩关系。<strong>VDOT ≠ VO2max</strong> — 两者的差距就是训练需要填补的空间。</p>
+      <p style="color:var(--text2);margin-top:6px">你当前: VDOT <strong>41</strong> (基于 PB 1:47) | 目标: VDOT <strong>45</strong> (sub-1:40) | +4 点差距 → 24 周系统训练可填补。</p>
+      <p style="color:var(--text2)">VDOT 表已内置在「配速区间」页面的成绩预测中，输入半马 PB 即可查询所有距离等效成绩。</p>
+    </div>
+
+    <div id="kb-easy" class="card">
+      <h4><span class="dot" style="background:var(--green)"></span>轻松跑 [Z2 有氧耐力] — 占跑量 ~45%</h4>
+      <p>阈值配速 × 1.19~1.29, 高驰 Z2 心率区, 完全可交谈。目的: 建毛细血管密度、促恢复、提升脂肪氧化。</p>
+      <p style="color:var(--red);margin-top:6px"><strong>⚠️ 业余跑者头号错误: 轻松跑太快。</strong>轻松跑不是「不太累」，是真正轻松——能用鼻子呼吸、跑完不该疲劳。跑快了挤占恢复、增加伤病、降低质量课表现。</p>
+    </div>
+
+    <div id="kb-tempo" class="card">
+      <h4><span class="dot" style="background:var(--cyan)"></span>节奏跑 [Z3 有氧动力]</h4>
+      <p>阈值配速 × 1.02~1.06, 高驰 Z3 区间, 「舒适的困难」— 你能稳定巡航约 1.5 小时的速度。</p>
+      <p style="color:var(--text2)">用途: 提高乳酸清除率，改善配速耐受。通常 20-40 分钟持续或 3-6 公里嵌入轻松跑中。是连接轻松跑和阈值跑的桥梁。</p>
+    </div>
+
+    <div id="kb-threshold" class="card">
+      <h4><span class="dot" style="background:var(--accent)"></span>阈值训练 [Z4 乳酸阈]</h4>
+      <p>阈值配速 ±2秒, 高驰 Z4 区间, 你能维持约 1 小时的最高配速。典型: 5×1200m、4×1600m、3×2400m。工作:休息 ≈ 5:1。</p>
+      <p style="color:var(--text2)"><strong>提升阈值 = 提升长跑成绩的最大杠杆。</strong>每组配速必须稳定 (±3秒)，最后一组崩掉 = 前面跑快了。巡航间歇是阈值训练的最佳形式——分段跑在阈值附近，间歇时间短。</p>
+    </div>
+
+    <div id="kb-interval" class="card">
+      <h4><span class="dot" style="background:var(--red)"></span>速度间歇 (Z5 无氧耐力)</h4>
+      <p>阈值配速 × 0.87~0.93, 高驰 Z5 区间, 约等于 3K-5K 比赛配速。典型: 6×800m、5×1000m。工作:休息 ≈ 1:1。</p>
+      <p style="color:var(--text2)"><strong>注意:</strong> 间歇不是冲刺！目标是累积 15-25 分钟总工作量，不是越快越好。每组配速稳定 (±3秒)，最后 1 组不崩为合格。每周 1 次，赛前 8-12 周开始。</p>
+    </div>
+
+    <div id="kb-longrun" class="card">
+      <h4><span class="dot" style="background:var(--blue)"></span>长距离跑 [Z2-Z3]</h4>
+      <p>每周 1 次，16-28km。目的: 脂肪氧化、心理韧性、热适应、补给练习。推荐<strong>递增长距离</strong>: 前 2/3 轻松 (Z2) + 后 1/3 渐进加速到 Z3 甚至半马配速。</p>
+      <p style="color:var(--text2)">每 3-4 周安排降量周长距离 (减少 20-30%)，防止过度训练。长距离后必须休息一整天 (周一)。</p>
+    </div>
+
+    <div id="kb-fartlek" class="card">
+      <h4><span class="dot" style="background:var(--purple)"></span>法特莱克 & 短冲</h4>
+      <p><strong>法特莱克:</strong> 瑞典语「速度游戏」。轻松跑中随意插入不定时/不定距的快跑 (如 8×1min 快 + 2min 轻松)。适合夏季替代正式间歇课。</p>
+      <p style="color:var(--text2)"><strong>短冲 (Strides):</strong> 100m × 4-8 组的 85-90% 加速跑，跑姿放松。轻松跑后完成。只需 3 分钟即可提高神经肌肉协调和跑步经济性——性价比最高的训练之一。</p>
+    </div>
+
+    <div id="kb-periodization" class="card">
+      <h4><span class="dot" style="background:var(--cyan)"></span>周期化训练 (Periodization)</h4>
+      <div class="phase-card" style="margin-bottom:8px">
+        <h4>基础期 (4-6 周)</h4>
+        <ul><li>建立有氧基础</li><li>全轻松跑，纯跑量</li><li>你的: 6月 (W1-4)</li></ul>
+      </div>
+      <div class="phase-card" style="margin-bottom:8px">
+        <h4>强度期 (4-6 周)</h4>
+        <ul><li>提升阈值 + VO2max</li><li>加入间歇训练</li><li>你的: 7-8月 (W5-12)</li></ul>
+      </div>
+      <div class="phase-card" style="margin-bottom:8px">
+        <h4>专项期 (4-6 周)</h4>
+        <ul><li>大量比赛配速段</li><li>配速专项耐力</li><li>你的: 9-10月 (W13-20)</li></ul>
+      </div>
+      <div class="phase-card">
+        <h4>赛前减量 (2-3 周)</h4>
+        <ul><li>消除疲劳，保持锐度</li><li>降量保强度</li><li>你的: 11月初 (W21-23)</li></ul>
+      </div>
+      <p style="color:var(--accent);font-size:0.78rem;margin-top:8px">3:1 法则: 每 3 周递增 → 第 4 周降量 20-30%，给身体吸收窗口。</p>
+    </div>
+
+    <div id="kb-8020" class="card">
+      <h4><span class="dot" style="background:var(--green)"></span>80/20 法则 & 训练负荷</h4>
+      <p><strong>80% 低强度 (Z1-Z2) + 20% 中高强度 (Z3-Z5)。</strong>轻松日真正轻松，强度日真正强度。你 4 天/周 + 2 强度课，里程上接近 70/30，基本达标。</p>
+      <p style="color:var(--text2);margin-top:8px"><strong>训练负荷 ACWR:</strong> 急慢性负荷比 0.8-1.3 安全，>1.5 受伤风险指数增加。不要连续 2 周让 ACWR 超 1.3。</p>
+      <p style="color:var(--text2)"><strong>10% 法则:</strong> 周跑量增加不超过 10%。</p>
+    </div>
+
+    <div id="kb-nutrition" class="card">
+      <h4><span class="dot" style="background:var(--accent)"></span>营养策略</h4>
+      <table>
+        <thead><tr><th>场景</th><th>建议</th></tr></thead>
+        <tbody>
+          <tr><td>日常碳水</td><td>5-8g/kg 体重 (训练期偏高)</td></tr>
+          <tr><td>日常蛋白质</td><td>1.4-1.8g/kg 体重</td></tr>
+          <tr><td>跑后 30min</td><td>碳水:蛋白 4:1 (如巧克力牛奶 500ml)</td></tr>
+          <tr><td>半马赛中</td><td>45-60min 吃 1 只能量胶 + 补水</td></tr>
+          <tr><td>赛前 3 天</td><td>碳水加载 8-10g/kg/天，减少纤维</td></tr>
+          <tr><td>补水</td><td>>60min 跑必带水，每 20min 150-200ml</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:6px">能量胶必须在训练中试吃过。比赛日不要尝试新品牌。</p>
+    </div>
+
+    <div id="kb-injury" class="card">
+      <h4><span class="dot" style="background:var(--red)"></span>伤病预防</h4>
+      <table>
+        <thead><tr><th>伤病</th><th>症状</th><th>常见原因</th></tr></thead>
+        <tbody>
+          <tr><td>髂胫束综合征</td><td>膝盖外侧疼痛</td><td>跑量骤增、臀中肌弱</td></tr>
+          <tr><td>胫骨骨膜炎</td><td>小腿内侧痛、按压痛</td><td>水泥地多、鞋太旧</td></tr>
+          <tr><td>足底筋膜炎</td><td>脚跟底部晨起痛</td><td>小腿太紧、足弓弱</td></tr>
+          <tr><td>跑者膝</td><td>膝盖前侧痛</td><td>股四头肌弱</td></tr>
+          <tr><td>跟腱炎</td><td>脚跟后上方痛</td><td>速度训练过猛</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:6px">红线: 跑步中疼痛 >3/10 且不随热身改善 → 降量。每 500-700km 换鞋。力量训练是伤病预防的王牌。</p>
+    </div>
+
+    <div id="kb-race" class="card">
+      <h4><span class="dot" style="background:var(--green)"></span>比赛执行 — sub-1:40 配速策略</h4>
+      <p><strong>推荐: 负分段 (Negative Split)</strong></p>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-size:0.84rem">
+        <div>0-3km: <strong style="color:var(--cyan)">4:50/km</strong> — 有意压速，不要被肾上腺素带偏</div>
+        <div>3-15km: <strong style="color:var(--accent)">4:44/km</strong> — 稳定巡航</div>
+        <div>15-21km: <strong style="color:var(--green)">4:40/km</strong> — 感觉好就加速，吃力就守住 4:44</div>
+      </div>
+      <p style="color:var(--text2);margin-top:10px"><strong>比赛日时间线:</strong> 赛前 2.5h 早餐 | 1.5h 到场热身 | 15min 能量胶 | 赛中 8-10km 第 2 胶</p>
+      <p style="color:var(--red)"><strong>不要:</strong> 穿新鞋、吃新胶、赛前大量喝水、起跑冲太快</p>
+    </div>
+
+    <div id="kb-coros" class="card">
+      <h4><span class="dot" style="background:var(--accent)"></span>高驰手表·6区训练体系</h4>
+      <p>你的高驰手表 (跑步能力 78.9) 采用<strong>6区训练模型</strong>，本工具的所有配速/心率区间已与之对齐：</p>
+      <table style="margin-top:10px">
+        <thead><tr><th>分区</th><th>名称</th><th>强度%</th><th>心率 (你)</th><th>体感</th><th>用途</th></tr></thead>
+        <tbody>
+          <tr><td style="color:var(--green);font-weight:700">Z1</td><td>恢复跑</td><td>50-60%</td><td>125-138</td><td>极轻松</td><td>主动恢复、热身冷身</td></tr>
+          <tr><td style="color:var(--cyan);font-weight:700">Z2</td><td>有氧耐力</td><td>60-70%</td><td>138-152</td><td>可对话</td><td>轻松跑、长距离、建仓</td></tr>
+          <tr><td style="color:var(--blue);font-weight:700">Z3</td><td>有氧动力</td><td>70-80%</td><td>152-165</td><td>说几句话</td><td>节奏跑、马拉松配速</td></tr>
+          <tr><td style="color:var(--accent);font-weight:700">Z4</td><td>乳酸阈值</td><td>80-90%</td><td>165-184</td><td>说几个词</td><td>阈值间歇、巡航间歇</td></tr>
+          <tr><td style="color:var(--red);font-weight:700">Z5</td><td>无氧耐力</td><td>90-95%</td><td>184-192</td><td>说不出话</td><td>速度间歇 (800-1200m)</td></tr>
+          <tr><td style="color:var(--purple);font-weight:700">Z6</td><td>无氧冲刺</td><td>95-100%</td><td>184-192</td><td>极限</td><td>短冲、上坡冲刺</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:8px"><strong>80/20 分配:</strong> Z1-Z2 占总跑量 ~80%，Z3-Z6 占 ~20%。手表上的"训练负荷"和"恢复时间"是重要参考——恢复时间归零再跑下一堂强度课。</p>
+      <p style="color:var(--text3);font-size:0.73rem"><strong>高驰跑步能力 78.9:</strong> 这是一个综合评分 (0-100+)，基于 VO2max、跑步经济性、训练历史等。你的 78.9 处于业余跑者中上水平，提升空间在专项耐力和跑量积累。</p>
+    </div>
+
+    <div id="kb-cadence" class="card">
+      <h4><span class="dot" style="background:var(--cyan)"></span>步频与步幅</h4>
+      <p>配速 = 步频 × 步幅。两者是跑步效率的核心变量。</p>
+      <p style="color:var(--text2);margin-top:6px"><strong>理想步频: 170-180 spm。</strong>高步频 (小步幅) 减少触地时间和冲击力，降低受伤风险。业余跑者常见问题是步频太低 (150-160)，步幅过大 → 刹车效应。</p>
+      <p style="color:var(--text2)"><strong>身高 170cm 参考:</strong> 轻松跑步频 170-175 spm，比赛配速步频 175-185 spm。提升步频不要一步到位——每次增加 3-5 spm，适应 2 周再继续。</p>
+      <p style="color:var(--text2)"><strong>训练方法:</strong> 节拍器 APP (设 170 bpm)、下坡轻跑 (自然提高步频)、短冲 (100m × 6-8 组) 都是有效练习。</p>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:6px"><strong>高驰手表:</strong> 可查看步频、步幅、触地时间、垂直振幅等数据。触地时间 220-260ms 为正常范围，越短效率越高。</p>
+    </div>
+
+    <div id="kb-form" class="card">
+      <h4><span class="dot" style="background:var(--green)"></span>跑姿要点</h4>
+      <p>好的跑姿 = 高效率 + 低受伤风险。以下是核心要点：</p>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-size:0.82rem">
+        <div><strong>头部/视线:</strong> 平视前方 20-30 米，不要低头看脚。脖子放松。</div>
+        <div style="margin-top:6px"><strong>肩/手臂:</strong> 肩膀下沉放松，手臂前后摆动 (不要横摆)，肘关节 ~90°，手轻握如握鸡蛋。</div>
+        <div style="margin-top:6px"><strong>躯干:</strong> 略微前倾 (从脚踝开始倾斜而非弯腰)，核心收紧。想象有人用绳子拉你胸口向前。</div>
+        <div style="margin-top:6px"><strong>髋部:</strong> 髋关节充分伸展，推髋向前。这是速度的关键——精英跑者和业余跑者最大的区别在髋伸。</div>
+        <div style="margin-top:6px"><strong>落地:</strong> 全脚掌或前脚掌着地，落地位置在身体重心正下方 (不要跨步)。想象"车轮滚动"而非"蹬地"。膝关节微屈缓冲。</div>
+      </div>
+      <p style="color:var(--red);font-size:0.78rem;margin-top:8px"><strong>⚠ 常见错误:</strong> 跨步过大 (脚跟在身体前方落地 → 刹车效应)、弯腰弓背、手臂横摆、下巴前伸。</p>
+      <p style="color:var(--text3);font-size:0.73rem"><strong>改善:</strong> 短冲训练 (100m 加速跑) 是改善跑姿最有效的方法——在 85-90% 速度下身体会自动找到最优姿态。</p>
+    </div>
+
+    <div id="kb-heat" class="card">
+      <h4><span class="dot" style="background:var(--red)"></span>热适应训练 · 深圳夏跑指南</h4>
+      <p>深圳 6-9 月日均气温 28-35°C、湿度 75-95%，体感温度常超 40°C。你的 P2-P5 (6~9月) 横跨整个夏季，高温下跑步心率比正常高 10-20 bpm。</p>
+      <p style="color:var(--text2);margin-top:6px"><strong>热适应生理变化 (需要 10-14 天):</strong> 血容量增加、出汗更早更多、汗液电解质浓度降低、静息心率下降。</p>
+      <p style="color:var(--text2)"><strong>操作指南:</strong></p>
+      <ul style="padding-left:18px;font-size:0.82rem;color:var(--text2)">
+        <li><strong>时间窗口:</strong> 清晨 5:30-7:00 (最佳) 或 晚上 19:30-21:00。避开 9:00-17:00 直晒</li>
+        <li><strong>配速调整:</strong> 6-8 月自动放慢 5-15s/km。以心率 (而非配速) 作为强度参照</li>
+        <li><strong>补水策略:</strong> 30 分钟以上跑步必须带水。每 20 分钟补水 150-200ml。超过 1h 补充电解质</li>
+        <li><strong>强度课:</strong> 在高温下不要硬顶配速。连续 3 组无法维持配速 → 降一档或转为法特莱克</li>
+      </ul>
+      <p style="color:var(--red);font-size:0.78rem;margin-top:8px"><strong>⚠ 中暑预警 (出现任一项立即停止):</strong> 头晕/恶心/发冷/头皮发麻/不出汗/视觉模糊。找阴凉处、少量补水、物理降温。不要逞强！</p>
+      <p style="color:var(--text3);font-size:0.73rem"><strong>台风/暴雨:</strong> 跑步机替代或力量训练。深圳夏天雷阵雨频繁，安全第一。</p>
+    </div>
+
+    <div id="kb-recovery" class="card">
+      <h4><span class="dot" style="background:var(--purple)"></span>恢复策略</h4>
+      <p>训练是在破坏，恢复是在重建。恢复不足=训练白费+伤病风险。</p>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-size:0.82rem">
+        <div><strong>💤 睡眠 (第一要务):</strong> 每晚 7-8h。深度睡眠分泌生长激素，修复肌肉。周末补觉无效——要持续稳定。睡前 1h 不刷手机。</div>
+        <div style="margin-top:6px"><strong>🍽 营养窗口:</strong> 训练后 30 分钟内补充碳水+蛋白质 (3~4:1)，如巧克力牛奶 500ml 或香蕉+鸡蛋。这是肌肉修复的黄金窗口。</div>
+        <div style="margin-top:6px"><strong>🔄 主动恢复:</strong> 轻松散步、游泳、瑜伽、泡沫轴放松。完全不动反而不利于恢复。</div>
+        <div style="margin-top:6px"><strong>📊 监控指标:</strong> 晨起静息心率 (比平时高 8+ bpm → 疲劳累积)、体感评分、睡眠质量。高驰手表有 HRV 和恢复时间参考。</div>
+        <div style="margin-top:6px"><strong>🧊 冷热交替:</strong> 强度课后冷水澡 (或冰敷膝盖/小腿) 可减轻炎症。热水澡促进血液循环——先冷后热。</div>
+      </div>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:8px"><strong>红线:</strong> 连续 3 天体感低于 4/10、连续 2 天睡眠不足 5h、晨起静息心率连续偏高 2 天 → 本周降量 30% 或多休息 1 天。</p>
+    </div>
+
+    <div id="kb-shoes" class="card">
+      <h4><span class="dot" style="background:var(--blue)"></span>跑鞋选择与轮换</h4>
+      <p>对 60km+/周跑量，<strong>至少 2 双跑鞋轮换</strong>——中底需要 24-48h 恢复弹性。轮换也能降低重复性劳损。</p>
+      <table style="margin-top:10px">
+        <thead><tr><th>类型</th><th>用途</th><th>特征</th><th>寿命</th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:600">日常训练鞋</td><td>80% 训练量</td><td>缓震好、耐用、重量适中</td><td>600-800km</td></tr>
+          <tr><td style="font-weight:600">速度/比赛鞋</td><td>间歇训练、比赛</td><td>轻量、回弹好、抓地力强</td><td>400-500km</td></tr>
+          <tr><td style="font-weight:600">恢复跑鞋</td><td>轻松跑、恢复跑</td><td>高缓震 (max cushion)</td><td>600-800km</td></tr>
+        </tbody>
+      </table>
+      <p style="color:var(--text2);font-size:0.82rem;margin-top:8px"><strong>你的 2-3 双轮换方案:</strong> ① 日常训练鞋 (如 Nike Pegasus / ASICS Novablast) 主力吃里程。② 碳板或轻量竞速鞋 (如 Vaporfly / 特步 160X / 李宁飞电) 速度和比赛用。③ (可选) 高缓震鞋雨天或恢复跑。</p>
+      <p style="color:var(--red);font-size:0.78rem;margin-top:6px"><strong>⚠ 不要比赛日穿新鞋、不要在旧鞋超过 800km 后继续用。</strong>中底塌陷后缓冲失效，胫骨骨膜炎风险大增。</p>
+    </div>
+
+    <div id="kb-load" class="card">
+      <h4><span class="dot" style="background:var(--accent)"></span>训练负荷管理 · ACWR</h4>
+      <p><strong>ACWR (急慢性负荷比) = 本周负荷 ÷ 过去 4 周平均负荷。</strong>这是目前最被认可的受伤风险预测指标。</p>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:8px;font-size:0.82rem">
+        <div><strong>安全区:</strong> ACWR 0.8-1.3 ✅</div>
+        <div><strong>警戒区:</strong> ACWR 1.3-1.5 ⚠️ 需密切监控</div>
+        <div style="color:var(--red)"><strong>危险区:</strong> ACWR > 1.5 🚫 受伤风险指数增加</div>
+      </div>
+      <p style="color:var(--text2);margin-top:10px"><strong>10% 法则 (保守):</strong> 周跑量增加不超过前一周的 10%。跑量翻倍期 (如你从 &lt;30km → 65km) 必须严格执行。</p>
+      <p style="color:var(--text2)"><strong>3:1 周期:</strong> 每 3 周递增跑量 → 第 4 周降量 20-30%。这是精英跑者训练的基础节奏，让身体有时间吸收适应。</p>
+      <p style="color:var(--text2)"><strong>高驰手表:</strong> 训练负荷数据可直接查看——7 天负荷和长期负荷的趋势比绝对值更重要。</p>
+    </div>
+
+    <div id="kb-strength" class="card">
+      <h4><span class="dot" style="background:var(--purple)"></span>力量训练与跑步</h4>
+      <p>力量训练不直接让你跑更快，但<strong>能让你承受更多跑量而不受伤</strong>。跑者的力量训练≠健美——目标是力量耐力，不是肌肉围度。</p>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-top:8px">
+        <div style="font-weight:700;margin-bottom:6px">跑者核心力量 6 个黄金动作 (每周 2 次，每次 25min)：</div>
+        <table style="font-size:0.82rem">
+          <tr><td style="padding:4px 8px">1. 深蹲</td><td>3×12</td><td style="color:var(--text2)">臀腿力量，模拟跑步落地缓冲。加重可用高脚杯深蹲</td></tr>
+          <tr><td style="padding:4px 8px">2. 保加利亚分腿蹲</td><td>3×10/边</td><td style="color:var(--text2)">单腿稳定性——跑步本质是单腿运动</td></tr>
+          <tr><td style="padding:4px 8px">3. 单腿硬拉</td><td>3×10/边</td><td style="color:var(--text2)">腘绳肌、臀肌——跑者的"后链"是动力来源</td></tr>
+          <tr><td style="padding:4px 8px">4. 臀桥 (单腿进阶)</td><td>3×15</td><td style="color:var(--text2)">臀肌激活。臀肌弱 → 膝/髋代偿 → 受伤</td></tr>
+          <tr><td style="padding:4px 8px">5. 平板支撑</td><td>3×45s</td><td style="color:var(--text2)">核心抗旋转——保持跑姿稳定不塌腰</td></tr>
+          <tr><td style="padding:4px 8px">6. 提踵</td><td>3×15</td><td style="color:var(--text2)">小腿力量——每一步落地承受 2-3 倍体重</td></tr>
+        </table>
+      </div>
+      <p style="color:var(--text3);font-size:0.73rem;margin-top:8px"><strong>安排原则:</strong> 力量训练放在强度课同一天 (强度课后) 或轻松日。不要在长距离前一天做大强度力量。P3-P5 阶段可增加跳蹲等爆发力训练。</p>
+    </div>
+
+    <div id="kb-raceday" class="card">
+      <h4><span class="dot" style="background:var(--green)"></span>比赛日全流程 · 半马版</h4>
+      <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:14px;margin-top:8px;font-size:0.84rem">
+        <div style="margin-bottom:10px"><strong style="color:var(--accent)">赛前 3 天:</strong> 碳水加载开始。每餐多加一碗米饭/面。减少纤维 (少吃蔬菜) 避免肠胃负担。充分补水。</div>
+        <div style="margin-bottom:10px"><strong style="color:var(--accent)">赛前 2 天:</strong> 4km 轻松跑 (保持节奏感) + 4×100m 短冲。继续高碳水。检查装备——号码布、芯片、跑鞋 (已穿过的！)、袜、衣服。</div>
+        <div style="margin-bottom:10px"><strong style="color:var(--accent)">赛前 1 天:</strong> 完全休息。碳水加载 (~8g/kg 体重 = ~540g 碳水)。少油少辣。晚上整理好所有装备放床头。22:00 前睡觉。</div>
+        <div style="margin-bottom:10px"><strong style="color:var(--green)">比赛日早上:</strong> 提前 2.5h 起床 → 轻早餐 (馒头+香蕉 / 吐司+蜂蜜) → 提前 1.5h 到达赛场 → 领物/存包/排空 → 提前 30min 开始热身 (慢跑 10min + 动态拉伸 + 2×100m 加速跑) → 提前 10min 吃第 1 只能量胶 → 进入起跑区。</div>
+        <div><strong style="color:var(--green)">赛中执行:</strong> 0-3km <span style="color:var(--cyan)">保守起步</span> (4:50/km 有意压速) → 3-15km <span style="color:var(--accent)">稳定巡航</span> (4:44/km) → 15-21km <span style="color:var(--green)">评估发力</span> (感觉好就 4:40，吃力守 4:44)。<strong>8-10km 吃第 2 胶。</strong>每站少量补水 (不要牛饮)。</div>
+      </div>
+      <p style="color:var(--red);font-size:0.78rem;margin-top:8px"><strong>❌ 比赛日禁做:</strong> 穿新鞋新袜、吃没试过的胶、起跑前大量喝水、被起跑气氛带飞冲太快、前半程看表看到焦虑。</p>
+    </div>
+
+    <div id="kb-glossary" class="card">
+      <h4><span class="dot" style="background:var(--text3)"></span>术语速查</h4>
+      <table>
+        <thead><tr><th>缩写</th><th>全称</th><th>含义</th></tr></thead>
+        <tbody>
+          <tr><td>VO2max</td><td>Maximal Oxygen Uptake</td><td>最大摄氧量</td></tr>
+          <tr><td>LT</td><td>Lactate Threshold</td><td>乳酸阈值</td></tr>
+          <tr><td>LTHR</td><td>Lactate Threshold HR</td><td>乳酸阈心率 (你的: 171 bpm)</td></tr>
+          <tr><td>HRR</td><td>Heart Rate Reserve</td><td>储备心率 (HRmax - RHR)</td></tr>
+          <tr><td>HRV</td><td>Heart Rate Variability</td><td>心率变异性 (恢复指标)</td></tr>
+          <tr><td>VDOT</td><td>V-dot O2</td><td>Jack Daniels 表现分数</td></tr>
+          <tr><td>PB/PR</td><td>Personal Best/Record</td><td>个人最佳</td></tr>
+          <tr><td>TT</td><td>Time Trial</td><td>计时测试 (全力跑)</td></tr>
+          <tr><td>LSD</td><td>Long Slow Distance</td><td>长距离慢跑</td></tr>
+          <tr><td>ACWR</td><td>Acute:Chronic Workload</td><td>急慢性负荷比 (>1.5 危险)</td></tr>
+          <tr><td>RPE</td><td>Rate of Perceived Exertion</td><td>主观疲劳 1-10</td></tr>
+          <tr><td>spm</td><td>Steps Per Minute</td><td>步频 (目标: 170-180)</td></tr>
+          <tr><td>GCT</td><td>Ground Contact Time</td><td>触地时间 (毫秒, 正常 220-260)</td></tr>
+          <tr><td>VO</td><td>Vertical Oscillation</td><td>垂直振幅 (厘米)</td></tr>
+          <tr><td>HM</td><td>Half Marathon</td><td>半程马拉松 (21.0975km)</td></tr>
+          <tr><td>FM</td><td>Full Marathon</td><td>全程马拉松 (42.195km)</td></tr>
+          <tr><td>BPM</td><td>Beats Per Minute</td><td>每分钟心跳数</td></tr>
+          <tr><td>PB/PR</td><td>Personal Best/Record</td><td>个人最佳</td></tr>
+          <tr><td>TT</td><td>Time Trial</td><td>计时测试</td></tr>
+          <tr><td>LSD</td><td>Long Slow Distance</td><td>长距离慢跑</td></tr>
+          <tr><td>ACWR</td><td>Acute:Chronic Workload Ratio</td><td>急慢性负荷比</td></tr>
+          <tr><td>RPE</td><td>Rate of Perceived Exertion</td><td>主观疲劳 1-10</td></tr>
+          <tr><td>spm</td><td>Steps Per Minute</td><td>步频</td></tr>
+          <tr><td>GCT</td><td>Ground Contact Time</td><td>触地时间 (ms)</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ 预设模态 ──>
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <h3>预设管理</h3>
+    <div class="input-group"><label>预设名称</label><input type="text" id="profileNameInput" placeholder="例如: 夏季训练、赛前峰值"></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-primary btn-sm" onclick="saveProfile()">保存当前预设</button>
+      <button class="btn btn-secondary btn-sm" onclick="closeProfileModal()">关闭</button>
+    </div>
+    <div style="margin-top:14px;font-size:0.82rem;color:var(--text2)" id="savedProfiles"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  核心工具函数
+// ═══════════════════════════════════════════════
+
+function parsePace(s) {
+  const p = String(s).trim().split(':');
+  return p.length === 2 ? parseInt(p[0])*60 + parseInt(p[1]) : 0;
+}
+function paceStr(s) {
+  return Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
+}
+function paceRange(lo, hi) { return paceStr(lo) + ' ~ ' + paceStr(hi); }
+function hrZone(rhr, mx, lo, hi) {
+  const hrr = mx - rhr;
+  return [Math.round(rhr + hrr*lo), Math.round(rhr + hrr*hi)];
+}
+// Jack Daniels VDOT 表 (以半马时间反查 VDOT，再查其他距离)
+const VDOT_TABLE = [
+  {vdot:30, p5k:'31:00',p10k:'64:00',hm:'2:22:00',fm:'4:55:00', pace5k:'6:12',pace10k:'6:24',paceHm:'6:45', nope:1},
+  {vdot:35, p5k:'27:00',p10k:'56:00',hm:'2:04:00',fm:'4:17:00', pace5k:'5:24',pace10k:'5:36',paceHm:'5:54', nope:1},
+  {vdot:38, p5k:'25:12',p10k:'52:15',hm:'1:56:00',fm:'4:02:00', pace5k:'5:02',pace10k:'5:13',paceHm:'5:31', nope:1},
+  {vdot:40, p5k:'24:08',p10k:'50:00',hm:'1:52:26',fm:'3:55:00', pace5k:'4:50',pace10k:'5:00',paceHm:'5:21', nope:1},
+  {vdot:41, p5k:'23:30',p10k:'48:45',hm:'1:49:36',fm:'3:49:00', pace5k:'4:42',pace10k:'4:52',paceHm:'5:13', nope:1},
+  {vdot:42, p5k:'22:53',p10k:'47:30',hm:'1:46:56',fm:'3:43:00', pace5k:'4:35',pace10k:'4:45',paceHm:'5:05', nope:1},
+  {vdot:43, p5k:'22:18',p10k:'46:15',hm:'1:44:18',fm:'3:37:00', pace5k:'4:28',pace10k:'4:37',paceHm:'4:57', nope:1},
+  {vdot:44, p5k:'21:45',p10k:'45:00',hm:'1:41:48',fm:'3:31:00', pace5k:'4:21',pace10k:'4:30',paceHm:'4:50', nope:1},
+  {vdot:45, p5k:'21:13',p10k:'43:45',hm:'1:39:18',fm:'3:25:00', pace5k:'4:15',pace10k:'4:23',paceHm:'4:43', nope:1},
+  {vdot:46, p5k:'20:45',p10k:'42:45',hm:'1:37:00',fm:'3:20:00', pace5k:'4:09',pace10k:'4:17',paceHm:'4:37', nope:1},
+  {vdot:47, p5k:'20:18',p10k:'41:50',hm:'1:34:42',fm:'3:15:00', pace5k:'4:04',pace10k:'4:11',paceHm:'4:30', nope:1},
+  {vdot:48, p5k:'19:50',p10k:'40:55',hm:'1:32:30',fm:'3:10:00', pace5k:'3:58',pace10k:'4:06',paceHm:'4:24', nope:1},
+  {vdot:49, p5k:'19:22',p10k:'40:00',hm:'1:30:24',fm:'3:05:30', pace5k:'3:52',pace10k:'4:00',paceHm:'4:18', nope:1},
+  {vdot:50, p5k:'18:55',p10k:'39:05',hm:'1:28:18',fm:'3:01:00', pace5k:'3:47',pace10k:'3:54',paceHm:'4:12', nope:1},
+  {vdot:55, p5k:'17:00',p10k:'35:10',hm:'1:19:00',fm:'2:42:00', pace5k:'3:24',pace10k:'3:31',paceHm:'3:45', nope:1},
+  {vdot:60, p5k:'15:30',p10k:'32:00',hm:'1:11:00',fm:'2:26:00', pace5k:'3:06',pace10k:'3:12',paceHm:'3:22', nope:1},
+  {vdot:65, p5k:'14:15',p10k:'29:20',hm:'1:04:30',fm:'2:13:00', pace5k:'2:51',pace10k:'2:56',paceHm:'3:04', nope:1},
+  {vdot:70, p5k:'13:10',p10k:'27:10',hm:'0:59:00',fm:'2:02:00', pace5k:'2:38',pace10k:'2:43',paceHm:'2:48', nope:1},
+];
+
+function vdotFromRace(timeHMS, distance) {
+  // timeHMS: "hh:mm:ss" or "mm:ss", distance: "hm"|"5k"|"10k"
+  const t = timeToSec(timeHMS);
+  if (!t) return 42;
+  const field = {hm:'hm', '5k':'p5k', '10k':'p10k'}[distance];
+  if (!field) return 42;
+  let best = 30;
+  for (const r of VDOT_TABLE) {
+    const rt = timeToSec(r[field]);
+    if (t <= rt) best = r.vdot;
+  }
+  return best;
+}
+
+function vdotLookup(v) { let b=VDOT_TABLE[0]; for(const r of VDOT_TABLE) if(v>=r.vdot) b=r; return b; }
+
+function raceEquivalents(hmTimeSec) {
+  // 基于半马成绩推算所有距离等效成绩
+  let vdot = 30;
+  for (const r of VDOT_TABLE) {
+    const hmSec = timeToSec(r.hm);
+    if (hmTimeSec <= hmSec) vdot = r.vdot;
+  }
+  return vdotLookup(vdot);
+}
+function timeToSec(s) {
+  const p=s.split(':'); if(p.length===2) return parseInt(p[0])*60+parseInt(p[1]);
+  if(p.length===3) return parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]); return 0;
+}
+function secToTime(s, isFM) {
+  if(isFM) { const h=Math.floor(s/3600), m=Math.floor((s%3600)/60); return h+':'+String(m).padStart(2,'0'); }
+  return Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+}
+function fmtPace(m){ return m>0 ? Math.floor(m)+':'+String(Math.round((m%1)*60)).padStart(2,'0') : '--:--'; }
+
+// ═══════════════════════════════════════════════
+//  全局状态
+// ═══════════════════════════════════════════════
+
+let logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+let settings = JSON.parse(localStorage.getItem('runplan_settings') || '{}');
+let profiles = JSON.parse(localStorage.getItem('runplan_profiles') || '{}');
+let editIdx = -1;
+
+// 默认设置
+const DEFAULTS = { pace:'4:48', thrHR:171, restHR:58, maxHR:192, vo2:52, ability:78.9, hmPB:'1:47:00', age:36, height:170, weight:67.2 };
+
+function mergeSettings() {
+  for (const k in DEFAULTS) {
+    if (!(k in settings)) settings[k] = DEFAULTS[k];
+  }
+}
+mergeSettings();
+
+function getS(k) { return settings[k] !== undefined ? settings[k] : DEFAULTS[k]; }
+
+// ═══════════════════════════════════════════════
+//  导航
+// ═══════════════════════════════════════════════
+
+document.querySelectorAll('.nav-item').forEach(el => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    const panelId = 'panel-' + el.dataset.panel;
+    document.getElementById(panelId).classList.add('active');
+    if (el.dataset.panel === 'dashboard') refreshDashboard();
+    if (el.dataset.panel === 'zones') {
+      loadZoneInputs();
+      calcZones();
+    }
+    if (el.dataset.panel === 'plan') renderPlan();
+    if (el.dataset.panel === 'log') renderLogPage();
+    if (el.dataset.panel === 'settings') loadSettingsPage();
+  });
+});
+
+// ═══════════════════════════════════════════════
+//  Toast
+// ═══════════════════════════════════════════════
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  t.style.animation = 'none'; t.offsetHeight;
+  t.style.animation = 'toastIn 0.3s ease, toastOut 0.3s ease 2s forwards';
+  setTimeout(() => { t.style.display = 'none'; }, 2400);
+}
+
+// ═══════════════════════════════════════════════
+//  数据看板
+// ═══════════════════════════════════════════════
+
+function getWeekKey(d) { const dt=new Date(d); const s=new Date(dt.getFullYear(),0,1); const day=(dt-s)/86400000; return dt.getFullYear()+'-W'+String(Math.ceil((day+1)/7)).padStart(2,'0'); }
+
+function refreshDashboard() {
+  const logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+  if (!logs.length) {
+    document.getElementById('dashboardStats').innerHTML = '<div class="stat-card accent"><div class="stat-label">暂无训练数据</div><div class="stat-value" style="font-size:1rem">去训练日志添加记录</div></div>';
+    document.getElementById('recentLogs').innerHTML = '';
+    document.getElementById('noLogsHint').style.display = 'block';
+    renderEmptyChart('chartVolume');
+    renderEmptyChart('chartPace');
+    renderEmptyChart('chartPie');
+    return;
+  }
+  document.getElementById('noLogsHint').style.display = 'none';
+
+  // 汇总统计
+  const totalDist = logs.reduce((s,l) => s + parseFloat(l.dist||0), 0);
+  const totalRuns = logs.length;
+  const paces = logs.filter(l => parseFloat(l.dist)>0 && parseFloat(l.dur)>0).map(l => parseFloat(l.dur)/parseFloat(l.dist));
+  const avgPace = paces.length ? paces.reduce((a,b)=>a+b,0)/paces.length : 0;
+  const hrs = logs.filter(l => parseFloat(l.hr)>0).map(l => parseFloat(l.hr));
+  const avgHR = hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : 0;
+  const feels = logs.filter(l => parseFloat(l.feel)>0).map(l => parseFloat(l.feel));
+  const avgFeel = feels.length ? (feels.reduce((a,b)=>a+b,0)/feels.length).toFixed(1) : '--';
+
+  // 本周统计
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay() + 1); weekStart.setHours(0,0,0,0);
+  const thisWeek = logs.filter(l => new Date(l.date) >= weekStart);
+  const weekDist = thisWeek.reduce((s,l) => s + parseFloat(l.dist||0), 0);
+  const weekRuns = thisWeek.length;
+  const weekTarget = 55; // 默认周目标
+
+  document.getElementById('dashboardStats').innerHTML = `
+    <div class="stat-card accent">
+      <div class="stat-icon">📏</div>
+      <div class="stat-label">总跑量</div>
+      <div class="stat-value">${totalDist.toFixed(0)}</div>
+      <div class="stat-sub">km · ${totalRuns} 次训练</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-icon">🏃</div>
+      <div class="stat-label">平均配速</div>
+      <div class="stat-value">${fmtPace(avgPace)}</div>
+      <div class="stat-sub">/km</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-icon">💓</div>
+      <div class="stat-label">平均心率</div>
+      <div class="stat-value">${avgHR||'--'}</div>
+      <div class="stat-sub">bpm</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-icon">📅</div>
+      <div class="stat-label">本周跑量</div>
+      <div class="stat-value">${weekDist.toFixed(1)}</div>
+      <div class="stat-sub">${weekRuns}次 · 目标${weekTarget}km</div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${Math.min(100,weekDist/weekTarget*100)}%;background:var(--purple)"></div></div>
+    </div>
+  `;
+
+  // 最近训练
+  const recent = logs.slice(-8).reverse();
+  let rhtml = '';
+  for (const l of recent) {
+    const pace = parseFloat(l.dist)>0 && parseFloat(l.dur)>0 ? fmtPace(parseFloat(l.dur)/parseFloat(l.dist)) : '--';
+    rhtml += `<tr>
+      <td>${l.date}</td>
+      <td>${typeBadge(l.type)}</td>
+      <td class="num">${l.dist||'--'}km</td>
+      <td class="num">${pace}</td>
+      <td class="num">${l.hr||'--'}</td>
+    </tr>`;
+  }
+  document.getElementById('recentLogs').innerHTML = rhtml || '<tr><td colspan="5" style="text-align:center;color:var(--text3)">暂无记录</td></tr>';
+
+  // 周趋势图 - 按周汇总
+  const weeks = {};
+  logs.forEach(l => {
+    const wk = getWeekKey(l.date);
+    if (!weeks[wk]) weeks[wk] = { dist:0, paces:[], count:0 };
+    weeks[wk].dist += parseFloat(l.dist||0);
+    weeks[wk].count++;
+    if (parseFloat(l.dist)>0 && parseFloat(l.dur)>0) weeks[wk].paces.push(parseFloat(l.dur)/parseFloat(l.dist));
+  });
+  const weekKeys = Object.keys(weeks).sort();
+  renderBarChart('chartVolume', weekKeys.map(k => weeks[k].dist), 'km', Math.max(70, Math.max(...weekKeys.map(k=>weeks[k].dist)) + 10));
+  renderLineChart('chartPace', weekKeys.map(k => {
+    const a = weeks[k].paces;
+    return a.length ? a.reduce((x,y)=>x+y,0)/a.length : 0;
+  }), 'min/km', 0);
+
+  // 类型分布饼图
+  const types = {};
+  logs.forEach(l => {
+    const t = l.type || '未知';
+    types[t] = (types[t]||0) + parseFloat(l.dist||0);
+  });
+  renderPieChart('chartPie', types);
+}
+
+function typeBadge(t) {
+  const map = { '轻松跑':'badge-easy','阈值间歇':'badge-threshold','节奏跑':'badge-tempo',
+    '长距离':'badge-long','VO2max间歇':'badge-interval','恢复跑':'badge-recovery','比赛':'badge-tempo','交叉训练':'badge-recovery' };
+  return `<span class="badge ${map[t]||'badge-easy'}">${t||'--'}</span>`;
+}
+
+// ═══════════════════════════════════════════════
+//  SVG 图
+// ═══════════════════════════════════════════════
+
+function renderEmptyChart(id) {
+  const svg = document.getElementById(id);
+  svg.innerHTML = `<text x="50%" y="50%" text-anchor="middle" fill="#545969" font-size="13">暂无数据</text>`;
+}
+
+function renderBarChart(id, data, unit, yMax) {
+  const svg = document.getElementById(id);
+  if (!data.length) { renderEmptyChart(id); return; }
+  const W = svg.clientWidth || 400, H = svg.clientHeight || 220;
+  const pad = { top:16, right:16, bottom:30, left:36 };
+  const pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
+  const barW = Math.min(30, pw / data.length * 0.7);
+  const gap = pw / data.length;
+
+  let html = '';
+  // 网格
+  for (let i=0; i<=4; i++) {
+    const y = pad.top + ph * (i/4);
+    html += `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="#252836" stroke-width="1"/>`;
+    html += `<text x="${pad.left-6}" y="${y+4}" text-anchor="end" fill="#545969" font-size="10">${Math.round(yMax*i/4)}</text>`;
+  }
+  // 柱状
+  data.forEach((d,i) => {
+    const x = pad.left + gap * i + (gap - barW)/2;
+    const h = (d / yMax) * ph;
+    const y = pad.top + ph - h;
+    html += `<rect x="${x}" y="${y}" width="${barW}" height="${h}" rx="3" fill="var(--accent)" opacity="0.85">
+      <animate attributeName="height" from="0" to="${h}" dur="0.5s" fill="freeze"/>
+      <animate attributeName="y" from="${pad.top+ph}" to="${y}" dur="0.5s" fill="freeze"/>
+    </rect>`;
+  });
+  // 底部标签
+  data.forEach((d,i) => {
+    const x = pad.left + gap * i + gap/2;
+    html += `<text x="${x}" y="${H-pad.bottom+14}" text-anchor="middle" fill="#545969" font-size="9">${Math.round(d)}</text>`;
+  });
+  svg.innerHTML = html;
+}
+
+function renderLineChart(id, data, unit, yMin) {
+  const svg = document.getElementById(id);
+  if (!data.length || data.every(d=>d===0)) { renderEmptyChart(id); return; }
+  const W = svg.clientWidth || 400, H = svg.clientHeight || 220;
+  const pad = { top:16, right:16, bottom:20, left:42 };
+  const pw = W - pad.left - pad.right, ph = H - pad.top - pad.bottom;
+  const vals = data.filter(d=>d>0);
+  const yMax = vals.length ? Math.max(...vals)*1.1 : 10;
+  const yLow = vals.length ? Math.min(...vals)*0.95 : 0;
+
+  let html = '';
+  for (let i=0; i<=4; i++) {
+    const y = pad.top + ph * (i/4);
+    const v = yMax - (yMax - yLow) * (i/4);
+    html += `<line x1="${pad.left}" y1="${y}" x2="${W-pad.right}" y2="${y}" stroke="#252836" stroke-width="1"/>`;
+    html += `<text x="${pad.left-6}" y="${y+4}" text-anchor="end" fill="#545969" font-size="10">${v.toFixed(1)}</text>`;
+  }
+  if (data.length < 2) {
+    const x = pad.left + pw/2;
+    const y = pad.top + ph - ((data[0]-yLow)/(yMax-yLow))*ph;
+    html += `<circle cx="${x}" cy="${y}" r="4" fill="var(--accent)"/>`;
+  } else {
+    let points = '';
+    const valid = data.map((d,i) => {
+      const x = pad.left + (i/(data.length-1)) * pw;
+      const y = d>0 ? pad.top + ph - ((d-yLow)/(yMax-yLow))*ph : pad.top + ph;
+      return {x,y,val:d};
+    }).filter(p=>p.val>0);
+    points = valid.map(p => `${p.x},${p.y}`).join(' ');
+    if (valid.length >= 2) {
+      html += `<polyline points="${points}" fill="none" stroke="var(--cyan)" stroke-width="2" stroke-linejoin="round"/>`;
+      valid.forEach(p => {
+        html += `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="var(--cyan)"><animate attributeName="r" from="0" to="3.5" dur="0.4s" fill="freeze"/></circle>`;
+      });
+    }
+  }
+  svg.innerHTML = html;
+}
+
+function renderPieChart(id, types) {
+  const svg = document.getElementById(id);
+  const entries = Object.entries(types).filter(([,v])=>v>0);
+  if (!entries.length) { renderEmptyChart(id); return; }
+  const total = entries.reduce((s,[,v])=>s+v,0);
+  const colors = ['var(--green)','var(--accent)','var(--cyan)','var(--blue)','var(--purple)','var(--red)'];
+  const W = svg.clientWidth || 400, H = svg.clientHeight || 200;
+  const cx = W/2, cy = H/2, r = Math.min(cx,cy) - 10;
+
+  let html = '', angle = -Math.PI/2;
+  entries.sort((a,b)=>b[1]-a[1]);
+  entries.forEach(([name,val],i) => {
+    const slice = (val/total) * Math.PI * 2;
+    const x1 = cx + r * Math.cos(angle);
+    const y1 = cy + r * Math.sin(angle);
+    const x2 = cx + r * Math.cos(angle + slice);
+    const y2 = cy + r * Math.sin(angle + slice);
+    const large = slice > Math.PI ? 1 : 0;
+    html += `<path d="M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large} 1 ${x2},${y2} Z" fill="${colors[i%colors.length]}" opacity="0.8"/>`;
+    angle += slice;
+  });
+  // 圆心
+  html += `<circle cx="${cx}" cy="${cy}" r="${r*0.45}" fill="var(--bg)"/>`;
+  html += `<text x="${cx}" y="${cy-4}" text-anchor="middle" fill="var(--text)" font-size="14" font-weight="700">${total.toFixed(0)}km</text>`;
+  html += `<text x="${cx}" y="${cy+14}" text-anchor="middle" fill="var(--text3)" font-size="10">总计</text>`;
+
+  // 图例
+  entries.forEach(([name,val],i) => {
+    const pct = ((val/total)*100).toFixed(0);
+    html += `<rect x="${W-110}" y="${10+i*18}" width="8" height="8" rx="2" fill="${colors[i%colors.length]}"/>`;
+    html += `<text x="${W-96}" y="${10+i*18+8}" fill="var(--text2)" font-size="10">${name} ${pct}%</text>`;
+  });
+
+  svg.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+//  配速区间计算
+// ═══════════════════════════════════════════════
+
+function loadZoneInputs() {
+  document.getElementById('zpPace').value = getS('pace');
+  document.getElementById('zpHmPB').value = getS('hmPB');
+  document.getElementById('zpThrHR').value = getS('thrHR');
+  document.getElementById('zpRestHR').value = getS('restHR');
+  document.getElementById('zpMaxHR').value = getS('maxHR');
+}
+
+function calcZones() {
+  const T = parsePace(document.getElementById('zpPace').value);
+  const thrHR = parseInt(document.getElementById('zpThrHR').value) || 171;
+  const restHR = parseInt(document.getElementById('zpRestHR').value) || 58;
+  const maxHR = parseInt(document.getElementById('zpMaxHR').value) || (thrHR + 21);
+
+  if (!T) return;
+
+  const zones = [
+    { name:'Z1 恢复跑', pace:[T*1.32,T*1.42], hr:hrZone(restHR,maxHR,0.50,0.60), purpose:'主动恢复', ratio:'10%', cls:'badge-recovery' },
+    { name:'Z2 有氧耐力', pace:[T*1.19,T*1.29], hr:hrZone(restHR,maxHR,0.60,0.70), purpose:'有氧基础', ratio:'45%', cls:'badge-easy' },
+    { name:'Z3 有氧动力', pace:[T*1.06,T*1.10], hr:hrZone(restHR,maxHR,0.70,0.80), purpose:'节奏耐力', ratio:'15%', cls:'badge-tempo' },
+    { name:'Z4 乳酸阈', pace:[T*0.98,T*1.02], hr:[thrHR-3,thrHR+3], purpose:'阈值提升', ratio:'15%', cls:'badge-threshold' },
+    { name:'Z5 无氧耐力', pace:[T*0.87,T*0.93], hr:[thrHR+4,maxHR], purpose:'最大摄氧量', ratio:'10%', cls:'badge-interval' },
+    { name:'Z6 无氧冲刺', pace:[T*0.78,T*0.85], hr:[0,0], purpose:'跑步经济性', ratio:'5%', cls:'badge-interval' },
+  ];
+
+  let zhtml = '';
+  for (const z of zones) {
+    const hr = z.hr[0]===0?'无参考':`${z.hr[0]}~${z.hr[1]}`;
+    zhtml += `<tr><td><span class="badge ${z.cls}">${z.name}</span></td><td style="color:var(--accent);font-weight:600">${paceRange(z.pace[0],z.pace[1])}</td><td>${hr}</td><td>${z.purpose}</td><td>${z.ratio}</td></tr>`;
+  }
+  document.getElementById('zoneTable').innerHTML = zhtml;
+
+  // 分段配速
+  const splits = [
+    { name:'Z5 无氧耐力', pace:T*0.90 },
+    { name:'Z4 乳酸阈', pace:T*1.00 },
+    { name:'Z6 冲刺', pace:T*0.82 },
+  ];
+  let shtml = '';
+  for (const s of splits) {
+    shtml += `<tr><td><span class="badge badge-interval">${s.name}</span></td>`;
+    [400,800,1000].forEach(d => { shtml += `<td style="color:var(--accent);font-weight:600">${paceStr(s.pace*(d/1000))}</td>`; });
+    shtml += '</tr>';
+  }
+  document.getElementById('splitTable').innerHTML = shtml;
+
+  // 成绩预测：基于半马 PB 反推 VDOT，而非 VO2max
+  const hmTimeSec = timeToSec(document.getElementById('zpHmPB').value);
+  const raceEquiv = raceEquivalents(hmTimeSec);
+  const vdotFromRace_val = vdotFromRace(document.getElementById('zpHmPB').value, 'hm');
+
+  // 阈值潜力：半马配速 ≈ 阈值配速 × 1.03 (阈值HR ~168, 半马HR ~160)
+  const T_pace = T; // 秒/公里
+  const hmPacePotential = T_pace * 1.03; // 阈值→半马经验系数
+  const hmTimePotential = hmPacePotential * 21.0975; // 秒
+  const potentialEquiv = raceEquivalents(hmTimePotential);
+
+  // 12 周务实目标：VDOT from race + 2 points (夏季保守)
+  const targetVdot = Math.min(70, vdotFromRace_val + 2);
+  const target = vdotLookup(targetVdot);
+
+  const labels = [
+    { label:'5K', cur:raceEquiv.p5k, pot:potentialEquiv.p5k, tar:target.p5k },
+    { label:'10K', cur:raceEquiv.p10k, pot:potentialEquiv.p10k, tar:target.p10k },
+    { label:'半马', cur:raceEquiv.hm, pot:potentialEquiv.hm, tar:target.hm },
+    { label:'全马', cur:raceEquiv.fm, pot:potentialEquiv.fm, tar:target.fm },
+  ];
+  let phtml = '';
+  for (const p of labels) {
+    const sameAsCur = p.tar === p.cur ? ' (维持)' : '';
+    phtml += `<tr><td>${p.label}</td><td style="color:var(--text2)">${p.cur}</td><td style="color:var(--accent);font-weight:600">${p.pot}</td><td style="color:var(--green);font-weight:600">${p.tar}${sameAsCur}</td></tr>`;
+  }
+  document.getElementById('predTable').innerHTML = phtml;
+
+  // 同步更新设置
+  settings.pace = document.getElementById('zpPace').value;
+  settings.hmPB = document.getElementById('zpHmPB').value;
+  settings.thrHR = parseInt(document.getElementById('zpThrHR').value);
+  settings.restHR = parseInt(document.getElementById('zpRestHR').value);
+  settings.maxHR = maxHR;
+  saveS();
+}
+
+// ═══════════════════════════════════════════════
+//  训练计划
+// ═══════════════════════════════════════════════
+
+function calcTargetReverse() {
+  const targetHm = timeToSec(document.getElementById('targetHmInput').value);
+  if (!targetHm) return;
+  const hmPace = targetHm / 21.0975;
+  const thrPace = hmPace / 1.03;
+  const result = document.getElementById('targetReverseResult');
+  result.innerHTML = `<div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;display:flex;flex-wrap:wrap;gap:16px">
+    <div><span style="color:var(--text3)">目标半马:</span> <strong>${secToTime(targetHm,true)}</strong></div>
+    <div><span style="color:var(--text3)">所需半马配速:</span> <strong style="color:var(--cyan)">${paceStr(hmPace)}/km</strong></div>
+    <div><span style="color:var(--text3)">所需阈值配速:</span> <strong style="color:var(--accent)">${paceStr(thrPace)}/km</strong></div>
+    <div><span style="color:var(--text3)">当前阈值配速:</span> <strong>${paceStr(parsePace(getS('pace')))}/km</strong></div>
+    <div><span style="color:var(--text3)">需提升:</span> <strong style="color:${thrPace<parsePace(getS('pace'))?'var(--green)':'var(--red)'}">${Math.abs(Math.round(thrPace-parsePace(getS('pace'))))}s</strong></div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  24周训练计划 — 模板生成器
+// ═══════════════════════════════════════════════
+
+let planSelPhase = null, planSelWeek = 0;
+
+function _pInfo(ph) {
+  const m = {P1:{n:'基础构建',mo:'5~6月',vol:'25→38km'},P2:{n:'引入结构',mo:'6~7月',vol:'40→48km'},
+    P3:{n:'强度提升',mo:'7~8月',vol:'48→58km'},P4:{n:'专项转化',mo:'8月',vol:'55→62km'},
+    P5:{n:'巅峰打磨',mo:'8~9月',vol:'58→65km'},P6:{n:'赛前减量',mo:'9~10月',vol:'45→25km'}};
+  return m[ph]||{n:'',mo:'',vol:''};
+}
+function _ph4wk(wk){if(wk<=4)return'P1';if(wk<=8)return'P2';if(wk<=12)return'P3';if(wk<=16)return'P4';if(wk<=20)return'P5';if(wk<=23)return'P6';return'R';}
+
+// 每周训练模板数据 — 键: phase, 值: arrays indexed by 0-based week-in-phase
+const _PT = {
+  P1:{mo:'5~6月',t:[{a:'轻松跑',k:'6km',p:'6:00~6:30',d:'全程鼻子呼吸'},{a:'轻松跑',k:'7km',p:'6:00~6:30',d:''},{a:'轻松跑',k:'8km',p:'6:00~6:30',d:''},{a:'轻松跑',k:'8km',p:'6:00~6:30',d:''}],
+   h:[{a:'轻松跑 + 短冲',k:'5km',p:'6:00~6:30',d:'4×100m 短冲加速'},{a:'轻松跑 + 短冲',k:'6km',p:'6:00~6:30',d:'4×100m 短冲'},{a:'轻松跑 + 短冲',k:'7km',p:'6:00~6:30',d:'4×100m 短冲'},{a:'轻松跑 + 短冲',k:'8km',p:'6:00~6:30',d:'4×100m 短冲'}],
+   s:[{a:'长距离',k:'8km',p:'6:00~6:30',d:'全程轻松'},{a:'长距离',k:'10km',p:'6:00~6:30',d:''},{a:'长距离',k:'12km',p:'6:00~6:30',d:''},{a:'长距离',k:'14km',p:'6:00~6:30',d:''}],
+   tot:[25,29,33,38],it:[0,0,0,0],ms:['','','','5K 全力测试跑 (记录基准成绩)'],
+   g:'建立有氧基础，适应夏季高温。全部轻松跑，不做强度。'},
+  P2:{mo:'6~7月',t:[{a:'巡航间歇',k:'4×800m',p:'4:45~4:55',d:'每组间歇慢跑90秒，保持匀速'},{a:'巡航间歇',k:'5×800m',p:'4:45~4:55',d:'间歇90秒'},{a:'巡航间歇',k:'4×1000m',p:'4:45~4:55',d:'间歇90秒'},{a:'巡航间歇',k:'5×1000m',p:'4:45~4:55',d:'间歇90秒'}],
+   h:[{a:'轻松跑 + 短冲',k:'8km',p:'5:50~6:10',d:'4×100m 短冲'},{a:'轻松跑 + 短冲',k:'9km',p:'5:50~6:10',d:'4×100m 短冲'},{a:'轻松跑 + 短冲',k:'10km',p:'5:50~6:10',d:'4×100m 短冲'},{a:'轻松跑 + 短冲',k:'10km',p:'5:50~6:10',d:'4×100m 短冲'}],
+   s:[{a:'长距离',k:'16km',p:'5:50~6:10',d:'全程匀速'},{a:'长距离',k:'18km',p:'5:50~6:10',d:'全程匀速'},{a:'长距离',k:'18km',p:'5:50~6:10',d:'后5公里渐进加速至5:15~5:25'},{a:'长距离',k:'20km',p:'5:50~6:10',d:'后5公里渐进加速'}],
+   tot:[40,44,45,48],it:[1,1,1,1],ms:['','','','5K 测试跑 (对比第4周成绩)'],
+   g:'引入1次/周阈值训练，跑量40→48km。夏天主攻跑量。'},
+  P3:{mo:'7~8月',t:[{a:'阈值间歇',k:'6×1000m',p:'4:40~4:48',d:'每组间歇慢跑90秒'},{a:'阈值间歇',k:'5×1200m',p:'4:40~4:48',d:'间歇90秒'},{a:'阈值间歇',k:'6×1200m',p:'4:38~4:45',d:'间歇90秒，保质不保量'},{a:'阈值间歇',k:'5×1600m',p:'4:38~4:45',d:'间歇2分钟'}],
+   h:[{a:'节奏跑',k:'8km',p:'4:50~5:00',d:'含3公里 @节奏配速'},{a:'节奏跑',k:'9km',p:'4:50~5:00',d:'含4公里 @节奏配速'},{a:'速度间歇',k:'6×800m',p:'4:08~4:20',d:'每组间歇2分钟，跑姿放松'},{a:'节奏跑',k:'10km',p:'4:48~4:58',d:'含5公里 @节奏配速'}],
+   s:[{a:'长距离',k:'20km',p:'5:45~6:05',d:''},{a:'长距离',k:'22km',p:'5:45~6:05',d:''},{a:'长距离',k:'18km',p:'5:45~6:05',d:'降量周'},{a:'长距离',k:'22km',p:'5:40~6:00',d:''}],
+   tot:[50,54,48,58],it:[2,2,2,2],ms:['','10K 测试跑','降量周',''],
+   g:'每周2次质量课。深圳最热月，配速自动放慢5~10秒。第11周为降量周。'},
+  P4:{mo:'8月',t:[{a:'阈值间歇',k:'3×2400m',p:'4:33~4:43',d:'间歇2分钟慢跑，延长单段阈值时间'},{a:'阈值间歇',k:'5×1600m',p:'4:33~4:43',d:'间歇2分钟'},{a:'阈值间歇',k:'3×2400m',p:'4:33~4:43',d:'间歇2分钟'},{a:'阈值间歇',k:'6×1600m',p:'4:33~4:43',d:'间歇2分钟'}],
+   h:[{a:'半马配速跑',k:'2×3km',p:'4:44~4:48',d:'每组间歇慢跑3分钟'},{a:'半马配速跑',k:'2×4km',p:'4:44~4:48',d:'间歇3分钟'},{a:'半马配速跑',k:'3×3km',p:'4:44~4:48',d:'间歇3分钟'},{a:'半马配速跑',k:'2×5km',p:'4:44~4:48',d:'间歇3分钟'}],
+   s:[{a:'长距离',k:'22km',p:'5:35~5:55',d:'含半马配速段'},{a:'长距离',k:'24km',p:'5:35~5:55',d:'后10公里 @半马配速'},{a:'长距离',k:'20km',p:'5:35~5:55',d:'降量周'},{a:'长距离',k:'24km',p:'5:30~5:50',d:'含半马配速段'}],
+   tot:[56,60,55,62],it:[2,2,2,2],ms:['','10K 测试跑 (赛前最重要基准)','降量周',''],
+    g:'大量半马配速训练。8月仍热，注意控心率。第15周降量。'},
+  P5:{mo:'8~9月',t:[{a:'阈值间歇',k:'6×1600m',p:'4:29~4:39',d:'间歇2分钟'},{a:'阈值间歇',k:'3×3200m',p:'4:29~4:39',d:'间歇3分钟。强度的顶峰！'},{a:'阈值间歇',k:'5×1600m',p:'4:29~4:39',d:'间歇2分钟'},{a:'阈值间歇',k:'8×1000m',p:'4:29~4:39',d:'间歇90秒'}],
+   h:[{a:'半马配速跑',k:'3×3km',p:'4:43~4:47',d:'每组间歇3分钟'},{a:'半马配速跑',k:'2×5km',p:'4:43~4:47',d:'间歇3分钟'},{a:'半马配速跑',k:'4×3km',p:'4:43~4:47',d:'间歇3分钟'},{a:'半马配速跑 (连续)',k:'10km',p:'4:43~4:47',d:'连续10公里 @半马配速！'}],
+   s:[{a:'长距离',k:'26km',p:'5:25~5:50',d:'渐进加速'},{a:'长距离 模拟赛',k:'24km',p:'4:44~5:25',d:'后12公里 @半马目标配速！最重要的模拟训练'},{a:'长距离',k:'20km',p:'5:25~5:50',d:'降量周'},{a:'最长距离',k:'28km',p:'4:50~5:25',d:'含10公里 @节奏配速'}],
+   tot:[58,62,60,65],it:[2,2,2,2],ms:['','10K 计时测试 或 参加路跑比赛','降量周',''],
+    g:'体能巅峰！最长跑量+最高强度。9月天气转凉，全力冲刺。第19周降量。'},
+  P6:{mo:'9~10月',t:[{a:'阈值间歇',k:'4×1600m',p:'4:38',d:'间歇2分钟。减量保强度。'},{a:'阈值间歇',k:'3×1000m',p:'4:30',d:'间歇90秒。保持锐度。'},{a:'阈值+冲刺',k:'2×1000m+2×400m',p:'4:25',d:'保持锐度。最后的质量课！'}],
+   h:[{a:'轻松跑',k:'8km',p:'5:30~6:00',d:'保持轻松'},{a:'轻松跑 + 短冲',k:'6km',p:'5:30~6:00',d:'4×100m 短冲，保持速度感'},{a:'休息',k:'—',p:'—',d:'完全休息'}],
+   s:[{a:'长距离',k:'16km',p:'4:44~5:25',d:'含8公里 @半马配速'},{a:'轻松跑',k:'12km',p:'5:30~6:10',d:'保持轻松，不要跑快'},{a:'🏁 比赛日！',k:'21.1km',p:'4:44',d:'目标: 1:39:59！前半程宁慢勿快，后半程发力'}],
+   tot:[45,35,'21.1+'],it:[1,1,1],ms:['','','🏁 比赛日！'],
+   g:'消除累积疲劳，保持神经肌肉锐度。减量不减强度。'},
+};
+
+function _weekData(wk) {
+  if (wk < 1 || wk > 23) return null;
+  const ph = _ph4wk(wk);
+  const t = _PT[ph];
+  if (!t) return null;
+  const wi = ((wk-1)%4);
+  return {ph:ph,mo:t.mo,tue:t.t[wi],thu:t.h[wi],sun:t.s[wi],tot:t.tot[wi],it:t.it[wi],ms:t.ms[wi]||'',g:t.g||''};
+}
+
+function _wkBadge(act) {
+  if (!act) return 'badge-recovery';
+  if (act.includes('轻松')||act.includes('恢复')) return 'badge-easy';
+  if (act.includes('阈值')||act.includes('巡航')) return 'badge-threshold';
+  if (act.includes('节奏')||act.includes('半马配速')) return 'badge-tempo';
+  if (act.includes('间歇')||act.includes('速度')) return 'badge-interval';
+  if (act.includes('长距离')) return 'badge-long';
+  if (act.includes('比赛')) return 'badge-tempo';
+  return 'badge-recovery';
+}
+
+function renderPlan() {
+  const sdEl = document.getElementById('planStartDate');
+  if (sdEl && !sdEl.value) { const stored = localStorage.getItem('plan_start_date'); if (stored) sdEl.value = stored; else sdEl.value = '2026-05-10'; }
+
+  const startRaw = sdEl ? sdEl.value : '2026-05-10';
+  if (sdEl && startRaw) localStorage.setItem('plan_start_date', startRaw);
+  const startDate = new Date(startRaw + 'T00:00:00');
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffDays = Math.floor((today - startDate) / 86400000);
+  let curWk = 1;
+  if (diffDays >= 0) curWk = Math.min(24, Math.floor(diffDays / 7) + 1);
+
+  const dispWk = planSelWeek > 0 ? Math.min(24, Math.max(1, planSelWeek)) : curWk;
+  const wd = dispWk <= 23 ? _weekData(dispWk) : null;
+  const dispPh = planSelPhase || (wd ? wd.ph : 'P6');
+  const isRaceWk = dispWk >= 24;
+
+  // Status line
+  const phN = dispWk <= 23 ? _ph4wk(dispWk) : 'R';
+  const mo = dispWk <= 23 ? _PT[phN]?.mo || '' : '10月';
+  const pi = _pInfo(phN);
+  let stHTML = '当前: <strong style="color:var(--accent)">第' + curWk + '周</strong> · ' + pi.n + ' · ' + mo;
+  if (curWk >= 24) stHTML = '当前: <strong style="color:var(--green)">🏁 比赛周</strong>';
+  if (diffDays < 0) stHTML += ' (计划尚未开始)';
+  const stEl = document.getElementById('planStatus');
+  if (stEl) stEl.innerHTML = stHTML;
+
+  // Timeline
+  _renderTimeline(curWk);
+
+  // Phase nav
+  _renderPhaseNav(dispPh, curWk);
+
+  // Weekly plan
+  if (isRaceWk) {
+    _renderRaceWeek();
+  } else if (wd) {
+    _renderWeekDetail(dispWk, wd);
+  }
+
+  // Week selector
+  _renderWeekSelector(dispWk, curWk, dispPh);
+
+  // Accordions
+  _renderPhaseAccordion(dispPh);
+  _renderMilestones();
+  _renderPaceEvo();
+  _renderStrength();
+  _renderWeather();
+}
+
+function _renderTimeline(curWk) {
+  const bar = document.getElementById('planTimeline');
+  const labels = document.getElementById('planTimelineLabels');
+  if (!bar || !labels) return;
+  let bhtml = '', lhtml = '';
+  for (let i = 1; i <= 24; i++) {
+    let cls = '';
+    if (i < curWk) cls = 'done';
+    else if (i === curWk) cls = 'cur';
+    if (i >= 21 && i <= 23) cls = i === curWk ? 'cur' : (i < curWk ? 'taper' : '');
+    if (i === 24) cls = i === curWk ? 'race cur' : (i < curWk ? 'race' : '');
+    bhtml += '<div class="tl-seg ' + cls + '" title="第' + i + '周"></div>';
+  }
+  bar.innerHTML = bhtml;
+  const markers = ['P1 5~6月','P2 6~7月','P3 7~8月','P4 8月','P5 8~9月','P6 9~10月','🏁10月'];
+  markers.forEach((m, idx) => {
+    lhtml += '<span class="tl-label' + (curWk >= idx*4+1 && curWk <= (idx===6?24:idx*4+4) ? ' cur' : '') + '">' + m + '</span>';
+  });
+  labels.innerHTML = lhtml;
+}
+
+function _renderPhaseNav(activePh, curWk) {
+  const nav = document.getElementById('phaseNav');
+  if (!nav) return;
+  const phases = ['P1','P2','P3','P4','P5','P6'];
+  let html = '';
+  phases.forEach(ph => {
+    const pi = _pInfo(ph);
+    const curPh = _ph4wk(curWk);
+    let cls = 'phase-btn';
+    if (ph === activePh) cls += ' active';
+    if (ph === curPh) cls += ' current';
+    html += '<span class="' + cls + '" onclick="planSelPhase=\'' + ph + '\';planSelWeek=0;renderPlan()">' + pi.n + '<span class="ph-sub">' + pi.mo + ' · ' + pi.vol + '</span></span>';
+  });
+  nav.innerHTML = html;
+}
+
+function _renderWeekDetail(wk, wd) {
+  const title = document.getElementById('weeklyPlanTitle');
+  const info = document.getElementById('planWeekInfo');
+  const body = document.getElementById('weeklyPlanContent');
+  const total = document.getElementById('planWeekTotal');
+  if (!body) return;
+
+  const pi = _pInfo(wd.ph);
+  if (title) title.innerHTML = '<span class="dot" style="background:var(--accent)"></span>第 ' + wk + ' 周 · ' + pi.n + ' (' + wd.mo + ')';
+  if (info) {
+    let iStr = wd.g || '';
+    if (wd.ms) iStr += (iStr ? ' · ' : '') + '<span style="color:var(--red);font-weight:600">⚠ ' + wd.ms + '</span>';
+    info.innerHTML = iStr;
+  }
+
+  const rows = [
+    {d:'周一',a:'休息 / 力量',c:'badge-recovery',s:'核心力量 25分钟 (深蹲/臀桥/平板)',k:''},
+    {d:'周二',a:wd.tue.a,c:_wkBadge(wd.tue.a),s:(wd.tue.p ? '配速 ' + wd.tue.p + ' ' : '') + (wd.tue.d||''),k:wd.tue.k},
+    {d:'周三',a:'休息',c:'badge-recovery',s:'完全休息',k:''},
+    {d:'周四',a:wd.thu.a,c:_wkBadge(wd.thu.a),s:(wd.thu.p ? '配速 ' + wd.thu.p + ' ' : '') + (wd.thu.d||''),k:wd.thu.k},
+    {d:'周五',a:'休息 / 力量',c:'badge-recovery',s:wd.it >= 2 ? '核心力量 25分钟' : '核心力量 25分钟',k:''},
+    {d:'周六',a:'休息',c:'badge-recovery',s:'完全休息',k:''},
+    {d:'周日',a:wd.sun.a,c:_wkBadge(wd.sun.a),s:(wd.sun.p ? '配速 ' + wd.sun.p + ' ' : '') + (wd.sun.d||''),k:wd.sun.k},
+  ];
+
+  let thtml = '';
+  rows.forEach(r => {
+    const isRest = r.a.includes('休息') && !r.k;
+    thtml += '<tr class="' + (isRest ? 'rest' : '') + '">' +
+      '<td class="d-label">' + r.d + '</td>' +
+      '<td class="d-type"><span class="badge ' + r.c + '">' + r.a + '</span></td>' +
+      '<td class="d-detail">' + r.s + '</td>' +
+      '<td class="d-dist">' + (r.k || '—') + '</td></tr>';
+  });
+  body.innerHTML = thtml;
+
+  if (total) {
+    const t = wd.tot;
+    const i = wd.it;
+    const note = i === 0 ? '全轻松周' : (i === 1 ? '1次强度课' : '2次强度课');
+    total.innerHTML = '<span style="font-weight:700">周跑量: ' + (typeof t === 'number' ? t + 'km' : t) + '</span> · ' + note;
+  }
+}
+
+function _renderRaceWeek() {
+  const title = document.getElementById('weeklyPlanTitle');
+  const body = document.getElementById('weeklyPlanContent');
+  const total = document.getElementById('planWeekTotal');
+  const info = document.getElementById('planWeekInfo');
+  if (title) title.innerHTML = '<span class="dot" style="background:var(--green)"></span>🏁 第 24 周 · 比赛周';
+  if (info) info.innerHTML = '目标: <strong style="color:var(--green)">半马 sub-1:40</strong>';
+  if (total) total.innerHTML = '';
+  if (!body) return;
+  const rows = [
+    {d:'周一~周五',a:'休息 / 轻松跑',c:'badge-recovery',s:'赛前3天: 6km轻松 + 短冲 | 赛前2天: 4km轻松 | 赛前1天: 完全休息 + 碳水加载',k:''},
+    {d:'周日',a:'🏁 半马比赛',c:'badge-tempo',s:'目标配速 4:44/km，前半程宁慢勿快！0-3km保守、3-15km巡航、15-21km发力',k:'21.1km'},
+  ];
+  let thtml = '';
+  rows.forEach(r => {
+    thtml += '<tr><td class="d-label">' + r.d + '</td>' +
+      '<td class="d-type"><span class="badge ' + r.c + '">' + r.a + '</span></td>' +
+      '<td class="d-detail">' + r.s + '</td>' +
+      '<td class="d-dist">' + (r.k || '—') + '</td></tr>';
+  });
+  body.innerHTML = thtml;
+}
+
+function _renderWeekSelector(dispWk, curWk, dispPh) {
+  const el = document.getElementById('weekSelector');
+  if (!el) return;
+  let weeks = [];
+  if (dispPh === 'P1') weeks = [1,2,3,4];
+  else if (dispPh === 'P2') weeks = [5,6,7,8];
+  else if (dispPh === 'P3') weeks = [9,10,11,12];
+  else if (dispPh === 'P4') weeks = [13,14,15,16];
+  else if (dispPh === 'P5') weeks = [17,18,19,20];
+  else if (dispPh === 'P6') weeks = [21,22,23,24];
+  else weeks = [1];
+  const msWeeks = [4,8,10,14,18,23,24];
+
+  let html = '';
+  weeks.forEach(w => {
+    let cls = 'wk-dot';
+    if (w === dispWk) cls += ' active';
+    if (w === curWk) cls += ' cur';
+    if (msWeeks.includes(w)) cls += ' ms';
+    if (w >= 24) cls += ' r';
+    html += '<span class="' + cls + '" onclick="planSelWeek=' + w + ';planSelPhase=null;renderPlan()">' + w + '</span>';
+  });
+  el.innerHTML = html;
+}
+
+function _renderPhaseAccordion(ph) {
+  const el = document.getElementById('accordionPhase');
+  if (!el) return;
+  const pi = _pInfo(ph);
+  const t = _PT[ph];
+  if (!t) { el.innerHTML = '<p style="color:var(--text3)">比赛周，无需阶段详情。</p>'; return; }
+  let html = '<p style="font-size:0.84rem;margin-bottom:10px"><strong>目标:</strong> ' + t.g + '</p>';
+  html += '<p style="font-size:0.84rem;margin-bottom:10px"><strong>跑量范围:</strong> ' + pi.vol + ' · <strong>月份:</strong> ' + t.mo + '</p>';
+  el.innerHTML = html;
+}
+
+function _renderMilestones() {
+  const el = document.getElementById('accordionMilestones');
+  if (!el) return;
+  el.innerHTML = '<table><thead><tr><th>周次</th><th>测试</th><th>预期成绩</th><th>用途</th></tr></thead><tbody>' +
+    '<tr><td style="color:var(--accent);font-weight:600">W4</td><td>5K 计时跑</td><td>23:30~24:30</td><td>基准线</td></tr>' +
+    '<tr><td>W8</td><td>5K 计时跑</td><td>22:30~23:30</td><td>检验基础期进展</td></tr>' +
+    '<tr><td>W10</td><td>10K 计时跑</td><td>48:00~50:00</td><td>半程评估</td></tr>' +
+    '<tr><td style="color:var(--accent);font-weight:600">W14</td><td>10K 计时跑</td><td>45:00~47:00</td><td>赛前最关键基准</td></tr>' +
+    '<tr><td>W18</td><td>10K 路跑赛</td><td>43:00~45:00</td><td>赛前信心</td></tr>' +
+    '<tr><td style="color:var(--green);font-weight:700">W24</td><td>🏁 半马</td><td><strong>1:39:xx</strong></td><td>终极目标</td></tr>' +
+    '</tbody></table>';
+}
+
+function _renderPaceEvo() {
+  const el = document.getElementById('accordionPaceEvo');
+  if (!el) return;
+  const T = parsePace(getS('pace'));
+  if (!T) return;
+  const cols = '周期,阈值配速,恢复跑,轻松跑,节奏跑,阈值跑,速度间歇'.split(',');
+  const rows = [
+    ['P1-P2',T,T*1.32,T*1.42,T*1.19,T*1.29,T*1.06,T*1.10,T*0.98,T*1.02,0,0],
+    ['P3',T-6,(T-6)*1.32,(T-6)*1.42,(T-6)*1.19,(T-6)*1.29,(T-6)*1.06,(T-6)*1.10,(T-6)*0.98,(T-6)*1.02,(T-6)*0.87,(T-6)*0.93],
+    ['P4',T-10,(T-10)*1.32,(T-10)*1.42,(T-10)*1.19,(T-10)*1.29,(T-10)*1.06,(T-10)*1.10,(T-10)*0.98,(T-10)*1.02,(T-10)*0.87,(T-10)*0.93],
+    ['P5',T-14,(T-14)*1.32,(T-14)*1.42,(T-14)*1.19,(T-14)*1.29,(T-14)*1.06,(T-14)*1.10,(T-14)*0.98,(T-14)*1.02,(T-14)*0.87,(T-14)*0.93],
+  ];
+  let html = '<div style="overflow-x:auto"><table><thead><tr>';
+  cols.forEach(c => html += '<th style="font-size:0.72rem">' + c + '</th>');
+  html += '</tr></thead><tbody>';
+  rows.forEach(r => {
+    html += '<tr>';
+    html += '<td>' + r[0] + '</td>';
+    html += '<td style="color:var(--accent);font-weight:600">' + paceStr(r[1]) + '</td>';
+    for (let i = 2; i < r.length; i += 2) {
+      if (r[i] === 0) html += '<td>—</td>';
+      else html += '<td style="color:var(--text2)">' + paceStr(r[i]) + '~' + paceStr(r[i+1]) + '</td>';
+    }
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<p style="font-size:0.73rem;color:var(--text3);margin-top:6px">每3周根据最新测试成绩更新阈值配速，各阶段配速会自动更新。</p>';
+  el.innerHTML = html;
+}
+
+function _renderStrength() {
+  const el = document.getElementById('accordionStrength');
+  if (!el) return;
+  el.innerHTML = '<table><thead><tr><th>动作</th><th class="num">组×次</th><th>目标肌群</th></tr></thead><tbody>' +
+    '<tr><td>高脚杯深蹲</td><td class="num">3×12</td><td>股四头肌、臀肌</td></tr>' +
+    '<tr><td>保加利亚分腿蹲</td><td class="num">3×10</td><td>股四头肌、臀肌、核心</td></tr>' +
+    '<tr><td>单腿硬拉</td><td class="num">3×10</td><td>腘绳肌、臀肌</td></tr>' +
+    '<tr><td>提踵</td><td class="num">3×15</td><td>小腿</td></tr>' +
+    '<tr><td>平板支撑</td><td class="num">3×45秒</td><td>核心</td></tr>' +
+    '<tr><td>臀桥</td><td class="num">3×15</td><td>臀肌</td></tr>' +
+    '</tbody></table>' +
+    '<p style="font-size:0.73rem;color:var(--text3);margin-top:8px">P1-P2: 自重训练为主 | P3-P4: 逐步增加负重 | P5: 爆发力为主 (跳蹲等) | P6: 减量维持</p>';
+}
+
+function _renderWeather() {
+  const el = document.getElementById('accordionWeather');
+  if (!el) return;
+  el.innerHTML = '<ul style="padding-left:18px;font-size:0.82rem;color:var(--text2)">' +
+    '<li><strong>5~6月 (P1):</strong> 气温适中→转热，训练窗口 6:00-8:00。建立有氧基础。</li>' +
+    '<li><strong>6~7月 (P2):</strong> 高温高湿开始，配速自然放慢5~10秒。以心率参照为主。清晨5:30-7:00 或晚上19:30后。</li>' +
+    '<li><strong>7~8月 (P3-P4):</strong> 全年最热！配速放慢10~15秒/公里。强度课降档执行，连续3组维持不了配速就降档。必带水。</li>' +
+    '<li><strong>8~9月 (P4-P5):</strong> 气温逐渐回落，开始追配速。训练窗口扩大。</li>' +
+    '<li><strong>9~10月 (P5-P6):</strong> 最佳训练季！全力执行计划配速。10月底比赛气温预计18-26°C，理想。</li>' +
+    '<li><strong>补水:</strong> 60分钟以上跑步必须带水，每20分钟补水150-200毫升</li>' +
+    '<li><strong>台风暴雨:</strong> 跑步机或力量训练替代。深圳夏季雷阵雨频繁。</li>' +
+    '<li><strong>伤病红线:</strong> 跑步中疼痛超过3/10且不随热身改善 → 降量休息</li>' +
+    '</ul>';
+}
+
+// ═══════════════════════════════════════════════
+//  训练日志
+// ═══════════════════════════════════════════════
+
+function renderLogPage() {
+  logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+  logs.sort((a,b) => a.date < b.date ? -1 : 1);
+
+  let lhtml = '';
+  logs.forEach((l,i) => {
+    const pace = parseFloat(l.dist)>0 && parseFloat(l.dur)>0 ? fmtPace(parseFloat(l.dur)/parseFloat(l.dist)) : '--';
+    lhtml += `<tr>
+      <td>${l.date}</td>
+      <td>${typeBadge(l.type)}</td>
+      <td class="num">${l.dist||'--'}km</td>
+      <td class="num">${l.dur||'--'}min</td>
+      <td class="num">${pace}</td>
+      <td class="num">${l.hr||'--'}</td>
+      <td class="num">${l.feel||'--'}</td>
+      <td style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.note||''}</td>
+      <td>
+        <button class="btn btn-xs" style="background:var(--surface3);color:var(--text2)" onclick="editLog(${i})">✎</button>
+        <button class="btn btn-xs btn-danger" onclick="deleteLog(${i})">✕</button>
+      </td>
+    </tr>`;
+  });
+  document.getElementById('logTable').innerHTML = lhtml || '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--text3)">暂无训练记录，使用上方表单添加</td></tr>';
+  document.getElementById('logCount').textContent = `(${logs.length})`;
+
+  // 设置默认日期
+  if (!document.getElementById('logDate').value) {
+    document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+  }
+}
+
+function addLog(e) {
+  e.preventDefault();
+  const entry = {
+    date: document.getElementById('logDate').value,
+    type: document.getElementById('logType').value,
+    dist: document.getElementById('logDist').value,
+    dur: document.getElementById('logDur').value,
+    hr: document.getElementById('logHR').value,
+    feel: document.getElementById('logFeel').value,
+    note: document.getElementById('logNote').value,
+  };
+
+  logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+  const idx = parseInt(document.getElementById('logEditIdx').value);
+  if (idx >= 0) {
+    logs[idx] = entry;
+    document.getElementById('logEditIdx').value = '-1';
+    document.getElementById('logSubmitBtn').textContent = '添加记录';
+    document.getElementById('logCancelBtn').style.display = 'none';
+    document.getElementById('logFormTitle').textContent = '➕ 新增训练';
+  } else {
+    logs.push(entry);
+  }
+
+  logs.sort((a,b) => a.date < b.date ? -1 : 1);
+  localStorage.setItem('runplan_logs', JSON.stringify(logs));
+  renderLogPage();
+  document.getElementById('logForm').reset();
+  document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+  toast(idx >= 0 ? '记录已更新' : '记录已添加');
+}
+
+function editLog(i) {
+  logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+  const l = logs[i];
+  document.getElementById('logDate').value = l.date;
+  document.getElementById('logType').value = l.type;
+  document.getElementById('logDist').value = l.dist;
+  document.getElementById('logDur').value = l.dur;
+  document.getElementById('logHR').value = l.hr;
+  document.getElementById('logFeel').value = l.feel;
+  document.getElementById('logNote').value = l.note || '';
+  document.getElementById('logEditIdx').value = i;
+  document.getElementById('logSubmitBtn').textContent = '更新记录';
+  document.getElementById('logCancelBtn').style.display = '';
+  document.getElementById('logFormTitle').textContent = '✎ 编辑训练';
+  document.getElementById('panel-log').scrollIntoView({behavior:'smooth'});
+}
+
+function cancelEditLog() {
+  document.getElementById('logEditIdx').value = '-1';
+  document.getElementById('logSubmitBtn').textContent = '添加记录';
+  document.getElementById('logCancelBtn').style.display = 'none';
+  document.getElementById('logFormTitle').textContent = '➕ 新增训练';
+  document.getElementById('logForm').reset();
+  document.getElementById('logDate').value = new Date().toISOString().split('T')[0];
+}
+
+function deleteLog(i) {
+  if (!confirm('确认删除这条训练记录？')) return;
+  logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+  logs.splice(i, 1);
+  localStorage.setItem('runplan_logs', JSON.stringify(logs));
+  renderLogPage();
+  toast('记录已删除');
+}
+
+function clearLogs() {
+  if (!confirm('确认清空所有训练记录？此操作不可恢复！')) return;
+  localStorage.setItem('runplan_logs', '[]');
+  logs = [];
+  renderLogPage();
+  toast('所有记录已清空');
+}
+
+function exportLogCSV() {
+  logs = JSON.parse(localStorage.getItem('runplan_logs') || '[]');
+  if (!logs.length) { toast('暂无记录可导出'); return; }
+  const headers = ['日期','训练类型','距离(km)','时长(min)','配速(/km)','心率(bpm)','体感','备注'];
+  let csv = headers.join(',') + '\n';
+  for (const l of logs) {
+    const pace = parseFloat(l.dist)>0 && parseFloat(l.dur)>0 ? fmtPace(parseFloat(l.dur)/parseFloat(l.dist)) : '';
+    csv += [l.date, l.type, l.dist, l.dur, pace, l.hr, l.feel, (l.note||'').replace(/,/g,' ')].join(',') + '\n';
+  }
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `训练日志_${new Date().toISOString().split('T')[0]}.csv`; a.click();
+  toast('CSV 已导出');
+}
+
+// ═══════════════════════════════════════════════
+//  设置 & 预设
+// ═══════════════════════════════════════════════
+
+function loadSettingsPage() {
+  document.getElementById('setPace').value = getS('pace');
+  document.getElementById('setHmPB').value = getS('hmPB');
+  document.getElementById('setThrHR').value = getS('thrHR');
+  document.getElementById('setRestHR').value = getS('restHR');
+  document.getElementById('setMaxHR').value = getS('maxHR');
+  document.getElementById('setVO2').value = getS('vo2');
+  document.getElementById('setAbility').value = getS('ability');
+  document.getElementById('setAge').value = getS('age');
+  document.getElementById('setHeight').value = getS('height');
+  document.getElementById('setWeight').value = getS('weight');
+  renderPresetList();
+}
+
+function saveSettings() {
+  settings.pace = document.getElementById('setPace').value;
+  settings.hmPB = document.getElementById('setHmPB').value;
+  settings.thrHR = parseInt(document.getElementById('setThrHR').value);
+  settings.restHR = parseInt(document.getElementById('setRestHR').value);
+  settings.maxHR = parseInt(document.getElementById('setMaxHR').value);
+  settings.vo2 = parseFloat(document.getElementById('setVO2').value);
+  settings.ability = parseFloat(document.getElementById('setAbility').value);
+  settings.age = parseInt(document.getElementById('setAge').value) || 36;
+  settings.height = parseInt(document.getElementById('setHeight').value) || 170;
+  settings.weight = parseFloat(document.getElementById('setWeight').value) || 67.2;
+  saveS();
+  toast('设置已保存');
+}
+
+function saveS() {
+  localStorage.setItem('runplan_settings', JSON.stringify(settings));
+}
+
+function openProfileModal() {
+  profiles = JSON.parse(localStorage.getItem('runplan_profiles') || '{}');
+  document.getElementById('profileModal').classList.add('open');
+  const list = document.getElementById('savedProfiles');
+  const keys = Object.keys(profiles);
+  if (!keys.length) {
+    list.innerHTML = '<p style="color:var(--text3)">暂无已保存的预设</p>';
+  } else {
+    list.innerHTML = keys.map(k =>
+      `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span>${k}</span>
+        <span>
+          <button class="btn btn-xs" style="background:var(--surface3);color:var(--text2);margin-right:4px" onclick="loadProfile('${k}')">加载</button>
+          <button class="btn btn-xs btn-danger" onclick="deleteProfile('${k}')">删除</button>
+        </span>
+      </div>`
+    ).join('');
+  }
+  document.getElementById('profileNameInput').value = '';
+}
+
+function closeProfileModal() {
+  document.getElementById('profileModal').classList.remove('open');
+}
+
+function saveProfile() {
+  const name = document.getElementById('profileNameInput').value.trim();
+  if (!name) { toast('请输入预设名称'); return; }
+  profiles = JSON.parse(localStorage.getItem('runplan_profiles') || '{}');
+  profiles[name] = { ...settings };
+  localStorage.setItem('runplan_profiles', JSON.stringify(profiles));
+  openProfileModal();
+  renderPresetList();
+  toast(`预设 "${name}" 已保存`);
+}
+
+function loadProfile(name) {
+  profiles = JSON.parse(localStorage.getItem('runplan_profiles') || '{}');
+  if (profiles[name]) {
+    settings = { ...profiles[name] };
+    saveS();
+    closeProfileModal();
+    document.getElementById('profileName').textContent = name;
+    loadSettingsPage();
+    toast(`已加载预设 "${name}"`);
+  }
+}
+
+function deleteProfile(name) {
+  if (!confirm(`确认删除预设 "${name}"？`)) return;
+  profiles = JSON.parse(localStorage.getItem('runplan_profiles') || '{}');
+  delete profiles[name];
+  localStorage.setItem('runplan_profiles', JSON.stringify(profiles));
+  openProfileModal();
+  renderPresetList();
+  toast(`预设 "${name}" 已删除`);
+}
+
+function renderPresetList() {
+  profiles = JSON.parse(localStorage.getItem('runplan_profiles') || '{}');
+  const el = document.getElementById('presetList');
+  const keys = Object.keys(profiles);
+  if (!keys.length) {
+    el.innerHTML = '<p style="color:var(--text3);font-size:0.82rem">暂无预设</p>';
+  } else {
+    el.innerHTML = keys.map(k =>
+      `<span style="display:inline-flex;align-items:center;gap:4px;margin:0 6px 6px 0;padding:4px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:20px;font-size:0.78rem;cursor:pointer" onclick="loadProfile('${k}')" title="加载预设">${k}</span>`
+    ).join('');
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  键盘快捷键
+// ═══════════════════════════════════════════════
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+  const map = { '1':'dashboard','2':'zones','3':'plan','4':'log','5':'settings','6':'knowledge' };
+  if (map[e.key]) {
+    document.querySelector(`.nav-item[data-panel="${map[e.key]}"]`).click();
+  }
+  if (e.key === 'Escape') closeProfileModal();
+});
+
+// ═══════════════════════════════════════════════
+//  初始化
+// ═══════════════════════════════════════════════
+
+function scrollToKb(id) {
+  document.getElementById('kb-' + id).scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function init() {
+  document.getElementById('profileName').textContent = Object.keys(profiles).length > 0 ? Object.keys(profiles)[0] : '我的数据';
+  refreshDashboard();
+  renderPlan();
+  renderLogPage();
+  loadZoneInputs();
+  calcZones();
+}
+
+// 监听输入框变化
+document.querySelectorAll('#panel-zones input').forEach(el => {
+  el.addEventListener('input', () => calcZones());
+});
+
+init();
+</script>
+</body>
+</html>
