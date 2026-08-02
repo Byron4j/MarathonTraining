@@ -1,67 +1,50 @@
-# 马拉松训练系统
+# PaceForge · 马拉松训练平台
 
-## 个人数据
-- 年龄: 36岁 | 性别: 男 | 身高: 170cm | 体重: 67.2kg (BMI 23.3)
-- 跑步能力: 78.9 (高驰手表) | VO2max: 52
-- 乳酸阈配速: 4:48/km | 乳酸阈心率: 171 bpm
-- 静息心率: 58 bpm | 最大心率: 192 bpm
-- 半马 PB: 1:47 (2025.11 郴州)
-- 目标赛事: 2026.10 底长沙半马 或 2026.11 初郴州半马
-- 目标: 半马 sub-1:40 (target 1:39:59)
-- 训练开始: 2026-05-10 (24周周期)
-- 所在地: 广东深圳
+汇聚高驰 / 佳明 / 华为多平台数据，基于训练数据智能生成 5K / 10K / 半马 / 全马周期化训练计划的跨端应用。
 
-## 项目结构
+## 仓库结构
 
 ```
-├── README.md                  # 项目说明
-├── 训练计划.md                 # 8周训练计划文档
-├── data/
-│   └── 训练日志模板.csv        # 训练日志 CSV 模板
-├── logs/                      # 存放每次训练的实际记录
-├── scripts/
-│   ├── calculate_zones.py    # 配速/心率区间计算器
-│   ├── parse_watch.py        # 手表数据解析 (GPX/FIT)
-│   └── analyze_log.py        # 训练日志统计分析
-└── tools/
-    └── index.html            # 网页版训练规划工具
+├── docs/        # 完整方案文档（PRD / 架构 / 数据模型 / API / 算法 / 平台接入 / UI规范 / 路线图）
+├── server/      # Node.js 后端（零依赖：node:http + node:sqlite，开箱即跑）
+└── app/         # Flutter 客户端（iOS / Android / 平板 / 折叠屏自适应）
 ```
+
+## 文档导航
+
+| 文档 | 内容 |
+|---|---|
+| [00-PRD](docs/00-产品需求文档-PRD.md) | 产品定位、功能需求、验收标准 |
+| [01-架构](docs/01-系统架构设计.md) | 总体架构、技术选型、目录结构 |
+| [02-数据模型](docs/02-数据模型设计.md) | 表结构、统一活动模型、迁移策略 |
+| [03-API](docs/03-API接口规范.md) | 全部 REST 端点与错误约定 |
+| [04-算法](docs/04-训练计划算法.md) | VDOT、配速区间、周期化、自适应 |
+| [05-平台接入](docs/05-第三方平台接入.md) | 高驰 OAuth、文件导入、佳明/华为预留 |
+| [06-UI规范](docs/06-UI-UX设计规范.md) | 视觉系统、响应式断点、页面体验 |
+| [07-路线图](docs/07-路线图与安全.md) | 迭代计划、生产化、安全合规 |
 
 ## 快速开始
 
-### 1. 网页工具（推荐主力使用）
-```bash
-open tools/index.html
-```
-功能：数据看板、配速区间计算、每周训练计划、8周训练周期、训练日志管理（增删改查 + CSV 导出）、SVG 趋势图表、多预设管理。
-键盘快捷键：`1` 看板 | `2` 配速 | `3` 计划 | `4` 日志 | `5` 设置
+### 后端（无需 npm install，Node ≥ 22）
 
-### 2. 命令行计算配速区间
 ```bash
-python3 scripts/calculate_zones.py              # 使用默认数据
-python3 scripts/calculate_zones.py 4:30 175     # 自定义配速和心率
-python3 scripts/calculate_zones.py --json       # JSON 输出
-python3 scripts/calculate_zones.py --interactive # 交互式问答
+node server/src/index.js        # http://localhost:8080
+node --test server/test/        # 冒烟测试
 ```
 
-### 3. 查看训练计划文档
-打开 `训练计划.md`
+可选环境变量：`PORT` `DB_PATH` `JWT_SECRET` `TOKEN_SECRET` `COROS_CLIENT_ID` `COROS_CLIENT_SECRET` `COROS_REDIRECT_URI`
 
-### 4. 训练数据分析
+### 客户端（需 Flutter SDK 3.x）
+
 ```bash
-python3 scripts/analyze_log.py logs/训练日志.csv          # 完整分析
-python3 scripts/analyze_log.py logs/训练日志.csv --all    # 含详细记录
-python3 scripts/analyze_log.py logs/训练日志.csv --json   # JSON 输出
-python3 scripts/analyze_log.py logs/训练日志.csv --trend  # 仅趋势分析
+cd app
+flutter pub get
+flutter run --dart-define=API_BASE=http://localhost:8080/api/v1
 ```
 
-### 5. 手表数据解析
-```bash
-python3 scripts/parse_watch.py data/file.gpx              # 单个 GPX
-python3 scripts/parse_watch.py --dir data/                # 批量解析目录
-python3 scripts/parse_watch.py --dir data/ --csv out.csv  # 导出 CSV
-```
-FIT 文件需要安装 fitparse：`pip3 install fitparse`
+## 当前状态：v0.1 MVP
 
-### 6. 训练日志格式
-复制 `data/训练日志模板.csv` 到 `logs/` 目录，每次训练后填写一行。网页工具中也有内置日志管理。
+- ✅ 方案文档全套
+- ✅ 后端：认证 / 档案 / 活动 / GPX 导入 / Mock 同步 / 高驰 OAuth 链路 / 计划引擎 / 统计
+- ✅ 客户端：全页面源码（自适应三断点）
+- ⏳ 佳明 / 华为官方 API：架构预留，下一迭代

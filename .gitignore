@@ -1,6 +1,25 @@
-__pycache__/
+# macOS / 编辑器
 .DS_Store
-*.pyc
-logs/*.csv
 *.swp
 *.swo
+
+# 旧脚本遗留
+__pycache__/
+*.pyc
+logs/*.csv
+
+# 后端运行时
+server/data/
+node_modules/
+
+# Flutter 构建产物
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+app/build/
+app/.idea/
+app/.metadata
+app/*.iml
+
+# 后端运行数据
+server/data/
